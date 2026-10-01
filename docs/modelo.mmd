@@ -43,9 +43,8 @@ flowchart TD
     %% (1, 1) ou (1, N) Trilhas podem ser "reutilizadas" entre as edições?
     Rel_Edicao_Evento{possui}:::rel
     Rel_Evento_Pessoa{coordena}:::rel
+    %% Instituição (0, N): pode existir no BD sem pessoa vinculada
     Rel_Instituicao_Pessoa{rel}:::rel
-    %% Tabela N:M ->  (0, N) ou (1, N)
-    %% Uma instituição deve estar obrigatoriamente associada a uma pessoa para existir no BD?
     Rel_Decisao_Pessoa{rel2}:::rel
     Rel_AtribuicaoRevisao_Pessoa{revisa}:::rel
     %% Pelo RF13, uma revisão pode ter (1,n) revisores, mas existe ce_revisor
@@ -94,7 +93,6 @@ flowchart TD
     Edicao ---|1,n| Rel_Edicao_Trilha ---|1,1| Trilha
     Edicao ---|1,1| Rel_Edicao_Evento ---|1,n| Evento
     Evento ---|1,1| Rel_Evento_Pessoa ---|1,n| Pessoa
-    Instituicao ---|0,n| Rel_Instituicao_Pessoa ---|0,n| Pessoa
     Decisao ---|0,n| Rel_Decisao_Pessoa ---|0,n| Pessoa
     AtribuicaoRevisao ---|1,1| Rel_AtribuicaoRevisao_Pessoa ---|1,n| Pessoa
     VersaoSubmissao ---|1,n| Rel_VersaoSubmissao_Pessoa ---|1,n| Pessoa
@@ -138,6 +136,16 @@ flowchart TD
     Topico ---|1,n| Rel_Topico_SubTopico ---|1,1| SubmissaoTopico
     Pessoa ---|0,n| Rel_Pessoa_PessoaTopico ---|1,1| PessoaTopico
     Topico ---|0,n| Rel_Topico_PessoaTopico ---|1,1| PessoaTopico
+
+    Instituicao ---|0,n| Rel_Instituicao_Pessoa ---|0,n| Pessoa
+    %% Atributos ligados ao Relacionamento N:M (Pessoa e Instituição)
+    %% dt_fim_vinculo vazio = vínculo ativo; tempo de vínculo é derivado das datas
+    Attr_Vinculo_TpVinculo([tp_vinculo]):::attr
+    Attr_Vinculo_DtInicio([dt_inicio_vinculo]):::attr
+    Attr_Vinculo_DtFim([dt_fim_vinculo]):::attr
+    Rel_Instituicao_Pessoa --- Attr_Vinculo_TpVinculo
+    Rel_Instituicao_Pessoa --- Attr_Vinculo_DtInicio
+    Rel_Instituicao_Pessoa --- Attr_Vinculo_DtFim
 
     %% ================= ATRIBUTOS (Elipses) =================
     %% Atributos tbl_evento
