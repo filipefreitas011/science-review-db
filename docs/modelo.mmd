@@ -1,5 +1,5 @@
 flowchart TD
-    %% Style (Vermelho  PK, Azul  atributos comuns)
+    %% Style (Vermelho  PK, Verde FK, Azul  atributos comuns)
     classDef pk stroke:#f00,stroke-width:2px,fill:#fff,color:#000;
     classDef attr stroke:#00f,stroke-width:2px,fill:#fff,color:#000;
     classDef fk stroke:#0a0,stroke-width:2px,fill:#fff,color:#000;
@@ -37,7 +37,7 @@ flowchart TD
     PessoaTopico[tbl_pessoa_topico]
 
     %% ================= RELACIONAMENTOS =================
-    %% RF15 - caso uma pessoa opte por revisar uma submissao de uma trilha, ela recebe papel revisor também?
+    %% RF15 - caso uma pessoa opte por revisar uma submissao de uma trilha, ela recebe papel revisor também? 
     Rel_PapelParticipacao_Trilha{participa_como}:::rel
     Rel_Edicao_Trilha{contem}:::rel
     %% (1, 1) ou (1, N) Trilhas podem ser "reutilizadas" entre as edições?
@@ -63,7 +63,7 @@ flowchart TD
     Rel_Topico_Submissao{abrange}:::rel
     Rel_Topico_Pessoa{expertise_em}:::rel
     Rel_Revisao_FormularioAvaliacao{utilizado}:::rel
-    Rel_Trilha_FormularioAvaliacao{possui}:::rel
+    Rel_Trilha_FormularioAvaliacao{possui_um}:::rel
     Rel_Questao_FormularioAvaliacao{composto_por}:::rel
     Rel_Submissao_Trilha{pertence}:::rel
     %% Entender melhor relações entre tópicos-trilha e submissão-trilha
@@ -98,7 +98,7 @@ flowchart TD
     Decisao ---|0,n| Rel_Decisao_Pessoa ---|0,n| Pessoa
     AtribuicaoRevisao ---|1,1| Rel_AtribuicaoRevisao_Pessoa ---|1,n| Pessoa
     VersaoSubmissao ---|1,n| Rel_VersaoSubmissao_Pessoa ---|1,n| Pessoa
-    AtribuicaoVersao ---|0,n|  Rel_AtribuicaoVersao_Pessoa ---|0,n|  Pessoa
+    AtribuicaoVersao ---|0,n| Rel_AtribuicaoVersao_Pessoa ---|0,n| Pessoa
     Revisao ---|0,n| Rel_Revisao_AtribuicaoRevisao ---|0,n| AtribuicaoRevisao
     Submissao ---|1,n| Rel_Submissao_AtribuicaoRevisao ---|1,1| AtribuicaoRevisao
     Submissao ---|0,n| Rel_Submissao_AtribuicaoVersao ---|0,n| AtribuicaoVersao
@@ -106,7 +106,19 @@ flowchart TD
     VersaoSubmissao ---|1,1| Rel_VersaoSubmissao_Submissao ---|1,n| Submissao
     Topico ---|1,n| Rel_Topico_Submissao ---|1,n| Submissao
     Topico ---|1,n| Rel_Topico_Pessoa ---|1,n| Pessoa
+
     Revisao ---|1,1| Rel_Revisao_FormularioAvaliacao ---|1,n| FormularioAvaliacao
+    %% Atributos ligados ao Relacionamento N:M (Formulário e Questão)
+    Attr_Quest_Form_OrdemApresentacao([quest_form_ordemApresentacao]):::attr 
+    Attr_Quest_Form_Peso([quest_form_peso]):::attr                            
+    Attr_Quest_Form_Obrigatoriedade([quest_form_obrigatoriedade]):::attr
+    Attr_Quest_Form_Visibilidade([quest_form_visibilidade ]):::attr
+    Rel_Questao_FormularioAvaliacao --- Attr_Quest_Form_OrdemApresentacao
+    Rel_Questao_FormularioAvaliacao --- Attr_Quest_Form_Peso
+    Rel_Questao_FormularioAvaliacao --- Attr_Quest_Form_Obrigatoriedade
+    %% Resolve o RF27 (ex: 'PÚBLICO_AUTOR' ou 'RESTRITO_COORDENACAO')
+    Rel_Questao_FormularioAvaliacao --- Attr_Quest_Form_Visibilidade 
+
     Trilha ---|1,1| Rel_Trilha_FormularioAvaliacao ---|1,n| FormularioAvaliacao
     Questao ---|1,n| Rel_Questao_FormularioAvaliacao ---|1,n| FormularioAvaliacao
     Submissao ---|1,1| Rel_Submissao_Trilha ---|0,n| Trilha
@@ -169,16 +181,15 @@ flowchart TD
 
     %% Atributos tbl_questao
     PK_Questao([cp_id_questao]):::pk
-    Attr_OrdemApresentacao([ordem_apresentacao]):::attr
-    Attr_Peso([peso]):::attr
-    Attr_Obrigatoriedade([obrigatoriedade]):::attr
+    %% Attr_OrdemApresentacao([ordem_apresentacao]):::attr   Dar flexibilidade para questões terem esses atributos 
+    %% Attr_peso([peso]):::attr                              difrentes a depender do formulário/trilha
+    %% Attr_obrigatoriedade([obrigatoriedade]):::attr
     Attr_TipoResposta([tipo_resposta]):::attr
     Attr_Status([status]):::attr
+    Attr_EnunciadoPergunta([enunciado_pergunta]):::attr
 
     Questao --- PK_Questao
-    Questao --- Attr_OrdemApresentacao
-    Questao --- Attr_Peso
-    Questao --- Attr_Obrigatoriedade
+    Questao --- Attr_EnunciadoPergunta
     Questao --- Attr_TipoResposta
     Questao --- Attr_Status
 
@@ -189,6 +200,8 @@ flowchart TD
     Attr_NrVersao([nr_versao]):::attr
     Attr_DtInicioVigencia([dt_inicio_vigencia]):::attr
     Attr_DtFimVigencia([dt_fim_vigencia]):::attr
+    %% Resolve o RF21
+    Attr_EtapaAvaliacao([tp_etapa_avaliacao]):::attr 
 
     FormularioAvaliacao --- PK_Formulario
     FormularioAvaliacao --- FK_Formulario_Trilha
@@ -196,6 +209,7 @@ flowchart TD
     FormularioAvaliacao --- Attr_NrVersao
     FormularioAvaliacao --- Attr_DtInicioVigencia
     FormularioAvaliacao --- Attr_DtFimVigencia
+    FormularioAvaliacao --- Attr_EtapaAvaliacao
 
     %% Atributos tbl_pessoa
     PK_Pessoa([cp_id_pessoa]):::pk
