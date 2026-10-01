@@ -5,7 +5,9 @@ CREATE TABLE tbl_pessoa (
     nm_pessoa VARCHAR(200) NOT NULL,
     email_principal VARCHAR(254) NOT NULL UNIQUE,
     cd_orcid VARCHAR(19) UNIQUE,
-    pais_pessoa CHAR(2)
+    pais_pessoa CHAR(2),
+    ce_instituicao BIGINT,
+    FOREIGN KEY (ce_instituicao) REFERENCES tbl_instituicao (cp_id_instituicao)
 );
 
 CREATE TABLE tbl_instituicao (
@@ -21,7 +23,9 @@ CREATE TABLE tbl_evento (
     cp_id_evento BIGSERIAL PRIMARY KEY, 
     sg_evento VARCHAR(20) NOT NULL UNIQUE,
     nm_evento VARCHAR(200) NOT NULL,
-    ds_evento TEXT
+    ds_evento TEXT,
+    ce_coordenador BIGINT NOT NULL,
+    FOREIGN KEY (ce_coordenador) REFERENCES tbl_pessoa (cp_id_pessoa)
 );
 
 CREATE TABLE tbl_edicao (
@@ -98,6 +102,19 @@ CREATE TABLE tbl_formulario_avaliacao (
     dt_inicio_vigencia TIMESTAMP NOT NULL,
     dt_fim_vigencia TIMESTAMP,
     FOREIGN KEY (ce_trilha) REFERENCES tbl_trilha (cp_id_trilha)
+);
+
+CREATE TABLE tbl_questao (
+    cp_id_questao BIGSERIAL PRIMARY KEY,
+    ordem_apresentacao INT NOT NULL,
+    peso_questao FLOAT NOT NULL,
+    ce_formulario BIGINT NOT NULL,
+    nm_questao VARCHAR(500) NOT NULL,
+    ds_questao TEXT,
+    tipo_resposta VARCHAR(20) NOT NULL,
+    obrigatorio BOOLEAN NOT NULL,
+    status_questao VARCHAR(20),
+    FOREIGN KEY (ce_formulario) REFERENCES tbl_formulario_avaliacao (cp_id_formulario)
 );
 
 CREATE TABLE tbl_revisao (
