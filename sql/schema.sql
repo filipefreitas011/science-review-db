@@ -90,4 +90,34 @@ CREATE TABLE tbl_atribuicao_revisao (
     FOREIGN KEY (ce_revisor) REFERENCES tbl_pessoa (cp_id_pessoa)
 );
 
+CREATE TABLE tbl_formulario_avaliacao (
+    cp_id_formulario BIGSERIAL PRIMARY KEY,
+    ce_trilha BIGINT NOT NULL,
+    nm_formulario VARCHAR(200) NOT NULL,
+    nr_versao INT,
+    dt_inicio_vigencia TIMESTAMP NOT NULL,
+    dt_fim_vigencia TIMESTAMP,
+    FOREIGN KEY (ce_trilha) REFERENCES tbl_trilha (cp_id_trilha)
+);
 
+CREATE TABLE tbl_revisao (
+    cp_id_revisao BIGSERIAL PRIMARY KEY,
+    ce_atribuicao BIGINT NOT NULL,
+    ce_formulario BIGINT NOT NULL,
+    dt_inicio TIMESTAMP NOT NULL,
+    dt_submissao TIMESTAMP,
+    status_revisao VARCHAR(20),
+    FOREIGN KEY (ce_atribuicao) REFERENCES tbl_atribuicao_revisao (cp_id_atribuicao),
+    FOREIGN KEY (ce_formulario) REFERENCES tbl_formulario_avaliacao (cp_id_formulario)
+);
+
+CREATE TABLE tbl_decisao (
+    cp_id_decisao BIGSERIAL PRIMARY KEY,
+    ce_submissao BIGINT NOT NULL,
+    resultado_decisao VARCHAR(20),
+    ce_responsavel BIGINT NOT NULL,
+    dt_decisao TIMESTAMP,
+    ds_justificativa TEXT,
+    FOREIGN KEY (ce_submissao) REFERENCES tbl_submissao (cp_id_submissao),
+    FOREIGN KEY (ce_responsavel) REFERENCES tbl_pessoa (cp_id_pessoa)
+)
