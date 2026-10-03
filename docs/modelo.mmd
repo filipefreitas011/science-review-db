@@ -1,9 +1,14 @@
 flowchart TD
-    %% Style (Vermelho  PK, Verde FK, Azul  atributos comuns)
+    %% Style (Vermelho  PK, Vermelho tracejado chave parcial, Azul  atributos comuns)
+    %% NOTAÇÃO PETER CHEN: chaves estrangeiras (ce_*) NÃO aparecem no modelo conceitual - quem representa a ligação
+    %% é o losango. As FKs foram mantidas COMENTADAS em cada entidade, indicando o relacionamento que as substitui,
+    %% para servirem de guia no mapeamento para o modelo lógico.
     classDef pk stroke:#f00,stroke-width:2px,fill:#fff,color:#000;
     classDef attr stroke:#00f,stroke-width:2px,fill:#fff,color:#000;
     classDef fk stroke:#0a0,stroke-width:2px,fill:#fff,color:#000;
     classDef rel fill:#555,stroke:#fff,stroke-width:1px;
+    %% Chave parcial de entidade fraca (vermelho tracejado). Entidade fraca = [[nome]] (borda dupla)
+    classDef pkp stroke:#f00,stroke-width:2px,stroke-dasharray:5 3,fill:#fff,color:#000;
 
     %% ================= ENTIDADES =================
     Evento[tbl_evento]
@@ -18,23 +23,39 @@ flowchart TD
     Topico[tbl_topico]
     Submissao[tbl_submissao]
     AtribuicaoRevisao[tbl_atribuicao_revisao]
-    AtribuicaoVersao[tbl_atribuicao_versao]
-    VersaoSubmissao[tbl_versao_submissao]
+    %% REMOVIDA (seção 1): tinha os mesmos atributos de tbl_atribuicao_revisao (inclusive ce_revisor) e era ligada à Submissão por um losango chamado 'autoria'. A autoria (RF7) agora é o relacionamento Rel_Pessoa_Submissao; a atribuição de revisor continua em tbl_atribuicao_revisao.
+    %% AtribuicaoVersao[tbl_atribuicao_versao]
+    %% Agora entidade FRACA de Submissão (antes entidade forte com cp_id_versao).
+    %% "Versão 3" só faz sentido dentro de um artigo -> identificada por (submissão + nr_versao), como a rodada.
+    %% Motivo: fecha o ciclo Rodada -> Versão -> Submissão (ver comentário em Rel_Rodada_VersaoSubmissao)
+    VersaoSubmissao[[tbl_versao_submissao]]
     FinalidadeAlteracao[tbl_finalidade_alteracao]
     Edicao[tbl_edicao]
 
     %% NOVAS ENTIDADES - FILIPE
     RespostaQuestao[tbl_resposta_questao]
     ParticipanteEdicao[tbl_participante_edicao]
-    RespostaQuestao[tbl_resposta_questao]
     %% conflito de interesse
     ConflitoInteresse[tbl_conflito_interesse]
     %% indicaçao de interesse (bidding como ta nos requisitos) do revisor pelos artigos
     PreferenciaRevisao[tbl_preferencia_revisao]
     %% relacionamento N:M entre submissao e topico
-    SubmissaoTopico[tbl_submissao_topico]
+    %% REMOVIDA (seção 1): duplicava o relacionamento N:M 'abrange' (Rel_Topico_Submissao). Em Chen, N:M sem atributos é só o losango; a tabela surge no modelo lógico.
+    %% SubmissaoTopico[tbl_submissao_topico]
     %% relacionamento N:M entre pessoas e topicos
-    PessoaTopico[tbl_pessoa_topico]
+    %% REMOVIDA: duplicava o relacionamento 'expertise_em' (Rel_Topico_Pessoa) e, sem as FKs, ficaria sem
+    %% identificador. Seu único atributo próprio (nivel_expertise) foi movido para o losango 'expertise_em'
+    %% PessoaTopico[tbl_pessoa_topico]
+
+    %% ===== ALTERAÇÕES SEÇÃO 1 - SUBMISSÃO =====
+    %% RF30 - Uma submissão pode passar por várias rodadas de avaliação.
+    %% Entidade FRACA de Submissão: uma rodada não existe sozinha e é identificada por (submissão + nr_rodada).
+    %% É o ponto de encontro do que muda a cada rodada: qual versão foi avaliada e qual decisão saiu dela.
+    RodadaAvaliacao[[tbl_rodada_avaliacao]]
+    %% RF43 - status_submissao guarda só o estado ATUAL; cada mudança de estado vira um registro aqui.
+    %% Entidade FRACA de Submissão, identificada por (submissão + dt_alteracao_status).
+    %% Equivale a um atributo multivalorado composto (status + quando + por quê), que em Chen vira entidade fraca.
+    HistoricoStatusSubmissao[[tbl_historico_status_submissao]]
 
     %% ================= RELACIONAMENTOS =================
     %% RF15 - caso uma pessoa opte por revisar uma submissao de uma trilha, ela recebe papel revisor também? 
@@ -45,19 +66,23 @@ flowchart TD
     Rel_Evento_Pessoa{coordena}:::rel
     %% Instituição (0, N): pode existir no BD sem pessoa vinculada
     Rel_Instituicao_Pessoa{rel}:::rel
-    Rel_Decisao_Pessoa{rel2}:::rel
+    %% Renomeado de rel2 para tomada_por: deixa claro que é a pessoa responsável pela decisão (ce_responsavel)
+    Rel_Decisao_Pessoa{tomada_por}:::rel
     Rel_AtribuicaoRevisao_Pessoa{revisa}:::rel
     %% Pelo RF13, uma revisão pode ter (1,n) revisores, mas existe ce_revisor
     Rel_VersaoSubmissao_Pessoa{is_responsavel_por}:::rel
-    Rel_AtribuicaoVersao_Pessoa{rel3}:::rel
+    %% REMOVIDO junto com tbl_atribuicao_versao
+    %% Rel_AtribuicaoVersao_Pessoa{rel3}:::rel
     Rel_Revisao_AtribuicaoRevisao{deve_revisar}:::rel
     %% RF18 - deve estar no MER ou só no código?
     Rel_Submissao_AtribuicaoRevisao{atribuivel_a}:::rel
     %% deveria haver relação com expertise de pessoa com topico?
-    Rel_Submissao_AtribuicaoVersao{autoria}:::rel
+    %% REMOVIDO: substituído por Rel_Pessoa_Submissao{autoria}, que liga o autor (Pessoa) à Submissão
+    %% Rel_Submissao_AtribuicaoVersao{autoria}:::rel
     Rel_VersaoSubmissao_FinalidadeAlteracao{tem_como_finalidade}:::rel
     %% Alteração de autores seria a nível de implementação
     %% Prazo para elementos tirar dúvida se poderia ser uma entidade ou atributos de entidades existentes
+    %% Relacionamento IDENTIFICADOR da entidade fraca VersaoSubmissao
     Rel_VersaoSubmissao_Submissao{contem2}:::rel
     Rel_Topico_Submissao{abrange}:::rel
     Rel_Topico_Pessoa{expertise_em}:::rel
@@ -65,6 +90,8 @@ flowchart TD
     Rel_Trilha_FormularioAvaliacao{possui_um}:::rel
     Rel_Questao_FormularioAvaliacao{composto_por}:::rel
     Rel_Submissao_Trilha{pertence}:::rel
+    %% NOVO: tbl_topico tinha FK ce_trilha mas nenhum losango com Trilha; sem ele, remover a FK perderia a ligação
+    Rel_Topico_Trilha{organiza}:::rel
     %% Entender melhor relações entre tópicos-trilha e submissão-trilha
 
     %% NOVOS RELACIONAMENTOS - FILIPE
@@ -73,19 +100,31 @@ flowchart TD
     Rel_Pessoa_Participante{exerce_papel}:::rel
     Rel_Edicao_Participante{ocorreu_em}:::rel
     Rel_Papel_Participante{definido_por}:::rel
-    Rel_Pessoa_Participante{exerce_papel}:::rel
-    Rel_Edicao_Participante{ocorreu_em}:::rel
-    Rel_Papel_Participante{definido_por}:::rel
-    Rel_Revisao_Resposta{gera_resposta}:::rel
-    Rel_Resposta_Questao{responde_a}:::rel
     Rel_Pessoa_Conflito{declara_conflito}:::rel
     Rel_Submissao_Conflito{possui_impedimento}:::rel
     Rel_Pessoa_Preferencia{indica_interesse}:::rel
     Rel_Submissao_Preferencia{alvo_preferencia}:::rel
-    Rel_Submissao_SubTopico{classificada_em}:::rel
-    Rel_Topico_SubTopico{categoriza}:::rel
-    Rel_Pessoa_PessoaTopico{tem_expertise}:::rel
-    Rel_Topico_PessoaTopico{dominio_em}:::rel
+    %% REMOVIDO junto com tbl_submissao_topico (duplicava 'abrange')
+    %% Rel_Submissao_SubTopico{classificada_em}:::rel
+    %% Rel_Topico_SubTopico{categoriza}:::rel
+    %% Rel_Pessoa_PessoaTopico{tem_expertise}:::rel   -> removido com tbl_pessoa_topico
+    %% Rel_Topico_PessoaTopico{dominio_em}:::rel   -> removido com tbl_pessoa_topico
+
+    %% NOVOS RELACIONAMENTOS - SEÇÃO 1
+    %% RF7 - autoria é N:M entre Pessoa e Submissão, com atributos próprios (ordem e responsável)
+    Rel_Pessoa_Submissao{autoria}:::rel
+    %% RF30 - relacionamento identificador da entidade fraca RodadaAvaliacao
+    Rel_Submissao_Rodada{passa_por}:::rel
+    %% RF30 - cada rodada avalia uma versão específica do manuscrito
+    Rel_Rodada_VersaoSubmissao{avalia}:::rel
+    %% RF31/RF32 - a decisão é tomada sobre uma rodada (e, por ela, sobre a submissão)
+    Rel_Rodada_Decisao{resulta_em}:::rel
+    %% RF43 - relacionamento identificador da entidade fraca HistoricoStatusSubmissao
+    Rel_Submissao_Historico{registra_status}:::rel
+    %% RF43 - quem provocou a mudança de estado
+    Rel_Historico_Pessoa{alterado_por}:::rel
+    %% RF43 - rastreia qual decisão provocou a mudança de estado (ex.: status 'aceita' veio da decisão X)
+    Rel_Historico_Decisao{originado_por}:::rel
 
 
     %% ================= LIGAÇÕES ENTIDADE <-> RELACIONAMENTO =================
@@ -93,17 +132,40 @@ flowchart TD
     Edicao ---|1,n| Rel_Edicao_Trilha ---|1,1| Trilha
     Edicao ---|1,1| Rel_Edicao_Evento ---|1,n| Evento
     Evento ---|1,1| Rel_Evento_Pessoa ---|1,n| Pessoa
-    Decisao ---|0,n| Rel_Decisao_Pessoa ---|0,n| Pessoa
+    %% Antes (0,n)-(0,n): permitia decisão sem responsável ou com vários. Agora cada decisão tem 1 responsável;
+    %% uma pessoa pode tomar 0..n decisões
+    Decisao ---|1,1| Rel_Decisao_Pessoa ---|0,n| Pessoa
     AtribuicaoRevisao ---|1,1| Rel_AtribuicaoRevisao_Pessoa ---|1,n| Pessoa
-    VersaoSubmissao ---|1,n| Rel_VersaoSubmissao_Pessoa ---|1,n| Pessoa
-    AtribuicaoVersao ---|0,n| Rel_AtribuicaoVersao_Pessoa ---|0,n| Pessoa
+    %% Cada envio só tem 1 responsável - tem ce_responsavel_envio
+    %% RESTRIÇÃO (caminho duplo Versão -> Pessoa e Versão -> Submissão -> autoria -> Pessoa):
+    %%  quem envia a versão deve ser autor da MESMA submissão (estar em Rel_Pessoa_Submissao).
+    %%  "Responsável pelo envio" (upload desta versão) != "autor responsável" (st_autor_responsavel)
+    VersaoSubmissao ---|1,1| Rel_VersaoSubmissao_Pessoa ---|0,n| Pessoa
+    %% REMOVIDO junto com tbl_atribuicao_versao
+    %% AtribuicaoVersao ---|0,n| Rel_AtribuicaoVersao_Pessoa ---|0,n| Pessoa
     Revisao ---|0,n| Rel_Revisao_AtribuicaoRevisao ---|0,n| AtribuicaoRevisao
-    Submissao ---|1,n| Rel_Submissao_AtribuicaoRevisao ---|1,1| AtribuicaoRevisao
-    Submissao ---|0,n| Rel_Submissao_AtribuicaoVersao ---|0,n| AtribuicaoVersao
-    VersaoSubmissao ---|1,1| Rel_VersaoSubmissao_FinalidadeAlteracao ---|1,1| FinalidadeAlteracao
-    VersaoSubmissao ---|1,1| Rel_VersaoSubmissao_Submissao ---|1,n| Submissao
-    Topico ---|1,n| Rel_Topico_Submissao ---|1,n| Submissao
-    Topico ---|1,n| Rel_Topico_Pessoa ---|1,n| Pessoa
+    %% Antes Submissao (1,n): obrigava toda submissão a nascer com atribuição. Ela é registrada antes de ter revisores
+    Submissao ---|0,n| Rel_Submissao_AtribuicaoRevisao ---|1,1| AtribuicaoRevisao
+    %% Submissao ---|0,n| Rel_Submissao_AtribuicaoVersao ---|0,n| AtribuicaoVersao
+    %% Antes (1,1)-(1,1): cada finalidade só poderia ser usada por UMA versão. FinalidadeAlteracao é um catálogo
+    %% (ex.: 'submissão inicial', 'correção solicitada', 'versão final'): cada versão tem 1 finalidade (RF11)
+    %% e cada finalidade é usada por 0..n versões
+    VersaoSubmissao ---|1,1| Rel_VersaoSubmissao_FinalidadeAlteracao ---|0,n| FinalidadeAlteracao
+    %% Versão (1,1): pertence a uma submissão (identificador).
+    %% Submissão (0,n): antes (1,n). A submissão pode ser registrada só com os dados do RF6 (título, resumo...)
+    %% e receber o manuscrito depois, enquanto o prazo estiver aberto (RF11)
+    VersaoSubmissao ---|1,1| Rel_VersaoSubmissao_Submissao ---|0,n| Submissao
+    %% Tópico: antes (1,n) - obrigava todo tópico a já ter submissão; a trilha cadastra tópicos antes de abrir
+    %% submissões. Submissão (1,n): deve ser classificada em pelo menos um tópico
+    Topico ---|0,n| Rel_Topico_Submissao ---|1,n| Submissao
+    %% RESTRIÇÃO (caminho duplo Submissão -> Trilha e Submissão -> Tópico -> Trilha):
+    %%  os tópicos de uma submissão devem pertencer à MESMA trilha da submissão
+    %% Antes (1,n)-(1,n): obrigava toda pessoa a declarar expertise. Adotada a cardinalidade de tbl_pessoa_topico,
+    %% que é a correta: um autor não precisa declarar tópicos e um tópico pode não ter especialistas ainda
+    Topico ---|0,n| Rel_Topico_Pessoa ---|0,n| Pessoa
+    %% nivel_expertise veio de tbl_pessoa_topico: pertence ao par (pessoa, tópico), não a um dos dois
+    Attr_NivelExpertise([nivel_expertise]):::attr
+    Rel_Topico_Pessoa --- Attr_NivelExpertise
 
     Revisao ---|1,1| Rel_Revisao_FormularioAvaliacao ---|1,n| FormularioAvaliacao
     %% Atributos ligados ao Relacionamento N:M (Formulário e Questão)
@@ -120,22 +182,63 @@ flowchart TD
     Trilha ---|1,1| Rel_Trilha_FormularioAvaliacao ---|1,n| FormularioAvaliacao
     Questao ---|1,n| Rel_Questao_FormularioAvaliacao ---|1,n| FormularioAvaliacao
     Submissao ---|1,1| Rel_Submissao_Trilha ---|0,n| Trilha
+    %% Tópico (1,1): pertence a uma trilha (era a FK ce_trilha); Trilha (0,n): pode ser criada antes dos tópicos
+    Topico ---|1,1| Rel_Topico_Trilha ---|0,n| Trilha
     %% NOVAS LIGAÇÕES - FILIPE
     Revisao ---|1,n| Rel_Revisao_Resposta ---|1,1| RespostaQuestao
     RespostaQuestao ---|1,1| Rel_Resposta_Questao ---|1,1| Questao
     Pessoa ---|1,n| Rel_Pessoa_Participante ---|1,1| ParticipanteEdicao
     Edicao ---|1,n| Rel_Edicao_Participante ---|1,1| ParticipanteEdicao
     PapelParticipacao ---|1,n| Rel_Papel_Participante ---|1,1| ParticipanteEdicao
-    Revisao ---|1,n| Rel_Revisao_Resposta ---|1,1| RespostaQuestao
-    RespostaQuestao ---|1,1| Rel_Resposta_Questao ---|1,1| Questao
     Pessoa ---|0,n| Rel_Pessoa_Conflito ---|1,1| ConflitoInteresse
     Submissao ---|0,n| Rel_Submissao_Conflito ---|1,1| ConflitoInteresse
     Pessoa ---|0,n| Rel_Pessoa_Preferencia ---|1,1| PreferenciaRevisao
     Submissao ---|0,n| Rel_Submissao_Preferencia ---|1,1| PreferenciaRevisao
-    Submissao ---|1,n| Rel_Submissao_SubTopico ---|1,1| SubmissaoTopico
-    Topico ---|1,n| Rel_Topico_SubTopico ---|1,1| SubmissaoTopico
-    Pessoa ---|0,n| Rel_Pessoa_PessoaTopico ---|1,1| PessoaTopico
-    Topico ---|0,n| Rel_Topico_PessoaTopico ---|1,1| PessoaTopico
+    %% REMOVIDO junto com tbl_submissao_topico
+    %% Submissao ---|1,n| Rel_Submissao_SubTopico ---|1,1| SubmissaoTopico
+    %% Topico ---|1,n| Rel_Topico_SubTopico ---|1,1| SubmissaoTopico
+    %% Pessoa ---|0,n| Rel_Pessoa_PessoaTopico ---|1,1| PessoaTopico   -> removido com tbl_pessoa_topico
+    %% Topico ---|0,n| Rel_Topico_PessoaTopico ---|1,1| PessoaTopico   -> removido com tbl_pessoa_topico
+
+    %% ===== NOVAS LIGAÇÕES - SEÇÃO 1 =====
+    %% RF7 - Autoria: toda submissão tem 1..n autores; uma pessoa pode ser autora de 0..n submissões
+    Submissao ---|1,n| Rel_Pessoa_Submissao ---|0,n| Pessoa
+    %% Atributos do relacionamento: não pertencem à Pessoa (ela tem ordens diferentes em cada artigo)
+    %% nem à Submissão (ela tem vários autores) -> pertencem ao par (pessoa, submissão)
+    Attr_Autoria_NrOrdem([nr_ordem_autoria]):::attr
+    Attr_Autoria_StResponsavel([st_autor_responsavel]):::attr
+    Rel_Pessoa_Submissao --- Attr_Autoria_NrOrdem
+    Rel_Pessoa_Submissao --- Attr_Autoria_StResponsavel
+    %% Regras que a cardinalidade não expressa (restrição de integridade / aplicação):
+    %%  - nr_ordem_autoria único dentro da mesma submissão (sem dois "1º autor")
+    %%  - pelo menos um autor com st_autor_responsavel = verdadeiro por submissão
+
+    %% RF30 - Submissão (0,n): pode ainda não ter entrado em avaliação; rodada (1,1): pertence a uma submissão
+    Submissao ---|0,n| Rel_Submissao_Rodada ---|1,1| RodadaAvaliacao
+    %% Rodada (1,1): avalia exatamente uma versão; versão (0,n): pode nunca ser avaliada (substituída no prazo)
+    %% ou ser reavaliada em outra rodada
+    RodadaAvaliacao ---|1,1| Rel_Rodada_VersaoSubmissao ---|0,n| VersaoSubmissao
+    %% RESTRIÇÃO (caminho duplo Rodada -> Submissão e Rodada -> Versão -> Submissão):
+    %%  a versão avaliada deve ser da MESMA submissão da rodada. Como Rodada e Versão são fracas de Submissão,
+    %%  no modelo lógico a rodada referencia a versão por (ce_submissao, nr_versao_avaliada) usando o mesmo
+    %%  ce_submissao da sua própria chave -> o banco garante a regra sem depender da aplicação.
+    %% RESTRIÇÃO (RF11): a versão avaliada deve ter dt_envio <= dt_inicio_rodada (enviada antes de a rodada começar)
+    %% RF31/RF32 - Rodada (0,n): em andamento não tem decisão; pode ter mais de uma se a decisão for revista
+    %% Decisão (1,1): sempre referente a uma rodada. Substitui a FK solta ce_submissao, que não tinha losango
+    RodadaAvaliacao ---|0,n| Rel_Rodada_Decisao ---|1,1| Decisao
+
+    %% RF43 - Submissão (1,n): ao ser registrada já ganha o primeiro registro (status inicial)
+    Submissao ---|1,n| Rel_Submissao_Historico ---|1,1| HistoricoStatusSubmissao
+    %% Histórico (0,1): mudanças automáticas (ex.: fim de prazo) não têm pessoa responsável
+    %% Fronteira com VersaoSubmissao: o histórico guarda mudanças de ESTADO da submissão; o envio de arquivo
+    %% já fica na própria versão (dt_envio + responsável). Não criar estados como "versão 3 enviada" (duplicaria dado)
+    HistoricoStatusSubmissao ---|0,1| Rel_Historico_Pessoa ---|0,n| Pessoa
+    %% Histórico (0,1): nem toda mudança vem de decisão (ex.: 'registrada', 'em avaliação');
+    %% Decisão (0,1): gera no máximo uma mudança de estado (pode não gerar, ex.: decisão revista para o mesmo estado)
+    HistoricoStatusSubmissao ---|0,1| Rel_Historico_Decisao ---|0,1| Decisao
+    %% RESTRIÇÕES (caminho duplo Histórico -> Submissão e Histórico -> Decisão -> Rodada -> Submissão):
+    %%  - a decisão ligada deve ser de uma rodada da MESMA submissão do histórico
+    %%  - dt_alteracao_status >= dt_decisao
 
     Instituicao ---|0,n| Rel_Instituicao_Pessoa ---|0,n| Pessoa
     %% Atributos ligados ao Relacionamento N:M (Pessoa e Instituição)
@@ -153,13 +256,13 @@ flowchart TD
     Attr_NmEvento([nm_evento]):::attr
     Attr_SgEvento([sg_evento]):::attr
     Attr_DsEvento([ds_evento]):::attr
-    FK_Evento_Coordenador([ce_coordenador]):::fk
+    %% FK_Evento_Coordenador([ce_coordenador]):::fk   -> ligação representada por Rel_Evento_Pessoa{coordena}
 
     Evento --- PK_Evento
     Evento --- Attr_NmEvento
     Evento --- Attr_SgEvento
     Evento --- Attr_DsEvento
-    Evento --- FK_Evento_Coordenador
+    %% Evento --- FK_Evento_Coordenador
 
     %% Atributos tbl_papel_participacao
     PK_PapelPessoa([cp_id_papel_pessoa]):::pk
@@ -172,7 +275,7 @@ flowchart TD
 
     %% Atributos tbl_trilha
     PK_Trilha([cp_id_trilha]):::pk
-    FK_Trilha_Edicao([ce_edicao]):::fk
+    %% FK_Trilha_Edicao([ce_edicao]):::fk   -> ligação representada por Rel_Edicao_Trilha{contem}
     Attr_TpAnonimato([tp_anonimato]):::attr
     Attr_NrRevisoresDesejado([nr_revisores_desejado]):::attr
     Attr_NmTrilha([nm_trilha]):::attr
@@ -180,7 +283,7 @@ flowchart TD
     Attr_QtdRevisoesMaxPorPessoa([qtd_revisoes_max_por_pessoa]):::attr
 
     Trilha --- PK_Trilha
-    Trilha --- FK_Trilha_Edicao
+    %% Trilha --- FK_Trilha_Edicao
     Trilha --- Attr_TpAnonimato
     Trilha --- Attr_NrRevisoresDesejado
     Trilha --- Attr_NmTrilha
@@ -203,7 +306,7 @@ flowchart TD
 
     %% Atributos tbl_formulario_avaliacao
     PK_Formulario([cp_id_formulario]):::pk
-    FK_Formulario_Trilha([ce_trilha]):::fk
+    %% FK_Formulario_Trilha([ce_trilha]):::fk   -> ligação representada por Rel_Trilha_FormularioAvaliacao{possui_um}
     Attr_NmFormulario([nm_formulario]):::attr
     Attr_NrVersao([nr_versao]):::attr
     Attr_DtInicioVigencia([dt_inicio_vigencia]):::attr
@@ -212,7 +315,7 @@ flowchart TD
     Attr_EtapaAvaliacao([tp_etapa_avaliacao]):::attr 
 
     FormularioAvaliacao --- PK_Formulario
-    FormularioAvaliacao --- FK_Formulario_Trilha
+    %% FormularioAvaliacao --- FK_Formulario_Trilha
     FormularioAvaliacao --- Attr_NmFormulario
     FormularioAvaliacao --- Attr_NrVersao
     FormularioAvaliacao --- Attr_DtInicioVigencia
@@ -249,56 +352,59 @@ flowchart TD
 
     %% Atributos tbl_decisao
     PK_Decisao([cp_id_decisao]):::pk
-    FK_Decisao_Submissao([ce_submissao]):::fk
+    %% No modelo lógico passa a referenciar a rodada (chave da entidade fraca = ce_submissao + nr_rodada)
+    %% FK_Decisao_Submissao([ce_submissao]):::fk   -> ligação representada por Rel_Rodada_Decisao{resulta_em} (no lógico: ce_submissao + nr_rodada)
     Attr_ResultadoDecisao([resultado_decisao]):::attr
     Attr_DtDecisao([dt_decisao]):::attr
-    FK_Decisao_Responsavel([ce_responsavel]):::fk
+    %% FK_Decisao_Responsavel([ce_responsavel]):::fk   -> ligação representada por Rel_Decisao_Pessoa{tomada_por}
     Attr_DsJustificativa([ds_justificativa]):::attr
 
     Decisao --- PK_Decisao
-    Decisao --- FK_Decisao_Submissao
+    %% Decisao --- FK_Decisao_Submissao
     Decisao --- Attr_ResultadoDecisao
     Decisao --- Attr_DtDecisao
-    Decisao --- FK_Decisao_Responsavel
+    %% Decisao --- FK_Decisao_Responsavel
     Decisao --- Attr_DsJustificativa
 
     %% Atributos tbl_revisao
     PK_Revisao([cp_id_revisao]):::pk
     Attr_DtInicio([dt_inicio]):::attr
-    FK_Revisao_Formulario([ce_formulario]):::fk
-    FK_Revisao_Atribuicao([ce_atribuicao]):::fk
+    %% FK_Revisao_Formulario([ce_formulario]):::fk   -> ligação representada por Rel_Revisao_FormularioAvaliacao{utilizado}
+    %% FK_Revisao_Atribuicao([ce_atribuicao]):::fk   -> ligação representada por Rel_Revisao_AtribuicaoRevisao{deve_revisar}
     Attr_DtSubmissao([dt_submissao]):::attr
     Attr_StatusRevisao([status_revisao]):::attr
 
     Revisao --- PK_Revisao
     Revisao --- Attr_DtInicio
-    Revisao --- FK_Revisao_Formulario
-    Revisao --- FK_Revisao_Atribuicao
+    %% Revisao --- FK_Revisao_Formulario
+    %% Revisao --- FK_Revisao_Atribuicao
     Revisao --- Attr_DtSubmissao
     Revisao --- Attr_StatusRevisao
 
     %% Atributos tbl_topico
     PK_Topico([cp_id_topico]):::pk
-    FK_Topico_Trilha([ce_trilha]):::fk
+    %% FK_Topico_Trilha([ce_trilha]):::fk   -> ligação representada por Rel_Topico_Trilha{organiza} (novo)
     Attr_NmTopico([nm_topico]):::attr
     Attr_DsTopico([ds_topico]):::attr
 
     Topico --- PK_Topico
-    Topico --- FK_Topico_Trilha
+    %% Topico --- FK_Topico_Trilha
     Topico --- Attr_NmTopico
     Topico --- Attr_DsTopico
 
     %% Atributos tbl_submissao
     PK_Submissao([cp_id_submissao]):::pk
-    FK_Submissao_Trilha([ce_trilha]):::fk
+    %% FK_Submissao_Trilha([ce_trilha]):::fk   -> ligação representada por Rel_Submissao_Trilha{pertence}
     Attr_ResumoSubmissao([resumo_submissao]):::attr
     Attr_DtRegistro([dt_registro]):::attr
     Attr_IdiomaSubmissao([idioma_submissao]):::attr
+    %% Mantido como "estado atual" para consulta rápida; o histórico completo fica em tbl_historico_status_submissao (RF43).
+    %% Deve sempre ser igual ao status_novo do registro mais recente do histórico
     Attr_StatusSubmissao([status_submissao]):::attr
     Attr_TituloSubmissao([titulo_submissao]):::attr
 
     Submissao --- PK_Submissao
-    Submissao --- FK_Submissao_Trilha
+    %% Submissao --- FK_Submissao_Trilha
     Submissao --- Attr_ResumoSubmissao
     Submissao --- Attr_DtRegistro
     Submissao --- Attr_IdiomaSubmissao
@@ -307,55 +413,62 @@ flowchart TD
 
     %% Atributos tbl_atribuicao_revisao
     PK_AtribuicaoRevisao([cp_id_atribuicao_revisao]):::pk
-    FK_AtribuicaoRevisao_Submissao([ce_submissao]):::fk
-    FK_AtribuicaoRevisao_Revisor([ce_revisor]):::fk
+    %% FK_AtribuicaoRevisao_Submissao([ce_submissao]):::fk   -> ligação representada por Rel_Submissao_AtribuicaoRevisao{atribuivel_a}
+    %% FK_AtribuicaoRevisao_Revisor([ce_revisor]):::fk   -> ligação representada por Rel_AtribuicaoRevisao_Pessoa{revisa}
     Attr_StatusAtribuicaoRevisao([status_atribuicao]):::attr
     Attr_DtRespostaRevisao([dt_resposta]):::attr
     Attr_TpOrigemAtribuicaoRevisao([tp_origem_atribuicao]):::attr
     Attr_DtAtribuicaoRevisao([dt_atribuicao]):::attr
 
     AtribuicaoRevisao --- PK_AtribuicaoRevisao
-    AtribuicaoRevisao --- FK_AtribuicaoRevisao_Submissao
-    AtribuicaoRevisao --- FK_AtribuicaoRevisao_Revisor
+    %% AtribuicaoRevisao --- FK_AtribuicaoRevisao_Submissao
+    %% AtribuicaoRevisao --- FK_AtribuicaoRevisao_Revisor
     AtribuicaoRevisao --- Attr_StatusAtribuicaoRevisao
     AtribuicaoRevisao --- Attr_DtRespostaRevisao
     AtribuicaoRevisao --- Attr_TpOrigemAtribuicaoRevisao
     AtribuicaoRevisao --- Attr_DtAtribuicaoRevisao
 
-    %% Atributos tbl_atribuicao_versao
-    PK_AtribuicaoVersao([cp_id_atribuicao_versao]):::pk
-    FK_AtribuicaoVersao_Submissao([ce_submissao]):::fk
-    FK_AtribuicaoVersao_Revisor([ce_revisor]):::fk
-    Attr_DtAtribuicaoVersao([dt_atribuicao]):::attr
-    Attr_DtRespostaVersao([dt_resposta]):::attr
-    Attr_TpOrigemAtribuicaoVersao([tp_origem_atribuicao]):::attr
-    Attr_StatusAtribuicaoVersao([status_atribuicao]):::attr
+    %% REMOVIDO (seção 1) - ver justificativa na declaração de tbl_atribuicao_versao
+    %% %% Atributos tbl_atribuicao_versao
+    %% PK_AtribuicaoVersao([cp_id_atribuicao_versao]):::pk
+    %% FK_AtribuicaoVersao_Submissao([ce_submissao]):::fk
+    %% FK_AtribuicaoVersao_Revisor([ce_revisor]):::fk
+    %% Attr_DtAtribuicaoVersao([dt_atribuicao]):::attr
+    %% Attr_DtRespostaVersao([dt_resposta]):::attr
+    %% Attr_TpOrigemAtribuicaoVersao([tp_origem_atribuicao]):::attr
+    %% Attr_StatusAtribuicaoVersao([status_atribuicao]):::attr
 
-    AtribuicaoVersao --- PK_AtribuicaoVersao
-    AtribuicaoVersao --- FK_AtribuicaoVersao_Submissao
-    AtribuicaoVersao --- FK_AtribuicaoVersao_Revisor
-    AtribuicaoVersao --- Attr_DtAtribuicaoVersao
-    AtribuicaoVersao --- Attr_DtRespostaVersao
-    AtribuicaoVersao --- Attr_TpOrigemAtribuicaoVersao
-    AtribuicaoVersao --- Attr_StatusAtribuicaoVersao
+    %% AtribuicaoVersao --- PK_AtribuicaoVersao
+    %% AtribuicaoVersao --- FK_AtribuicaoVersao_Submissao
+    %% AtribuicaoVersao --- FK_AtribuicaoVersao_Revisor
+    %% AtribuicaoVersao --- Attr_DtAtribuicaoVersao
+    %% AtribuicaoVersao --- Attr_DtRespostaVersao
+    %% AtribuicaoVersao --- Attr_TpOrigemAtribuicaoVersao
+    %% AtribuicaoVersao --- Attr_StatusAtribuicaoVersao
 
-    %% Atributos tbl_versao_submissao
-    PK_Versao([cp_id_versao]):::pk
-    FK_Versao_Submissao([ce_submissao]):::fk
-    FK_Versao_ResponsavelEnvio([ce_responsavel_envio]):::fk
-    Attr_NrVersaoSubmissao([nr_versao]):::attr
-    FK_Versao_FinalidadeAlteracao([ce_finalidade_alteracao]):::fk
+    %% Atributos tbl_versao_submissao (entidade fraca de tbl_submissao)
+    %% REMOVIDO: cp_id_versao. Com a versão fraca, a identificação é (ce_submissao + nr_versao); nenhuma outra
+    %% tabela referenciava cp_id_versao
+    %% PK_Versao([cp_id_versao]):::pk
+    %% No modelo lógico, ce_submissao compõe a PK junto com nr_versao
+    %% FK_Versao_Submissao([ce_submissao]):::fk   -> ligação representada por Rel_VersaoSubmissao_Submissao{contem2} (identificador; no lógico compõe a PK com nr_versao)
+    %% FK_Versao_ResponsavelEnvio([ce_responsavel_envio]):::fk   -> ligação representada por Rel_VersaoSubmissao_Pessoa{is_responsavel_por}
+    %% nr_versao vira chave PARCIAL: sequencial e único dentro da mesma submissão (1, 2, 3...)
+    Attr_NrVersaoSubmissao([nr_versao]):::pkp
+    %% FK_Versao_FinalidadeAlteracao([ce_finalidade_alteracao]):::fk   -> ligação representada por Rel_VersaoSubmissao_FinalidadeAlteracao{tem_como_finalidade}
+    %% RESTRIÇÃO (RF35): no máximo uma versão com tp_versao = 'final' por submissão, e só após uma decisão
+    %% de aceite na última rodada
     Attr_TpVersao([tp_versao]):::attr
     Attr_DtEnvio([dt_envio]):::attr
     Attr_NmArquivo([nm_arquivo]):::attr
     Attr_DsLocalizacaoArquivo([ds_localizacao_arquivo]):::attr
     Attr_HashArquivo([hash_arquivo]):::attr
 
-    VersaoSubmissao --- PK_Versao
-    VersaoSubmissao --- FK_Versao_Submissao
-    VersaoSubmissao --- FK_Versao_ResponsavelEnvio
+    %% VersaoSubmissao --- PK_Versao
+    %% VersaoSubmissao --- FK_Versao_Submissao
+    %% VersaoSubmissao --- FK_Versao_ResponsavelEnvio
     VersaoSubmissao --- Attr_NrVersaoSubmissao
-    VersaoSubmissao --- FK_Versao_FinalidadeAlteracao
+    %% VersaoSubmissao --- FK_Versao_FinalidadeAlteracao
     VersaoSubmissao --- Attr_TpVersao
     VersaoSubmissao --- Attr_DtEnvio
     VersaoSubmissao --- Attr_NmArquivo
@@ -373,82 +486,107 @@ flowchart TD
 
     %% Atributos tbl_edicao
     PK_Edicao([cp_id_edicao]):::pk
-    FK_Edicao_Evento([ce_evento]):::fk
+    %% FK_Edicao_Evento([ce_evento]):::fk   -> ligação representada por Rel_Edicao_Evento{possui}
     Attr_CrEdicao([cr_edicao]):::attr
     Attr_AnoEdicao([ano_edicao]):::attr
 
     Edicao --- PK_Edicao
-    Edicao --- FK_Edicao_Evento
+    %% Edicao --- FK_Edicao_Evento
     Edicao --- Attr_CrEdicao
     Edicao --- Attr_AnoEdicao
 
     %% NOVOS ATRIBUTOS - FILIPE
     %% Atributos tbl_resposta_questao
     PK_RespostaQuestao([cp_id_resposta]):::pk
-    FK_Resposta_Revisao([ce_revisao]):::fk
-    FK_Resposta_Questao([ce_questao]):::fk
+    %% FK_Resposta_Revisao([ce_revisao]):::fk   -> ligação representada por Rel_Revisao_Resposta{gera_resposta}
+    %% FK_Resposta_Questao([ce_questao]):::fk   -> ligação representada por Rel_Resposta_Questao{responde_a}
     Attr_VlResposta([vl_resposta]):::attr
     Attr_NotaQuestao([nr_nota]):::attr
 
     RespostaQuestao --- PK_RespostaQuestao
-    RespostaQuestao --- FK_Resposta_Revisao
-    RespostaQuestao --- FK_Resposta_Questao
+    %% RespostaQuestao --- FK_Resposta_Revisao
+    %% RespostaQuestao --- FK_Resposta_Questao
     RespostaQuestao --- Attr_VlResposta
     RespostaQuestao --- Attr_NotaQuestao
 
     %% Atributos tbl_participante_edicao 
     PK_ParticipanteEdicao([cp_id_participante_edicao]):::pk
-    FK_Participante_Pessoa([ce_pessoa]):::fk
-    FK_Participante_Edicao([ce_edicao]):::fk
-    FK_Participante_Papel([ce_papel_pessoa]):::fk
+    %% FK_Participante_Pessoa([ce_pessoa]):::fk   -> ligação representada por Rel_Pessoa_Participante{exerce_papel}
+    %% FK_Participante_Edicao([ce_edicao]):::fk   -> ligação representada por Rel_Edicao_Participante{ocorreu_em}
+    %% FK_Participante_Papel([ce_papel_pessoa]):::fk   -> ligação representada por Rel_Papel_Participante{definido_por}
     Attr_DtInicioVigenciaPapel([dt_inicio_vigencia]):::attr
     Attr_DtFimVigenciaPapel([dt_fim_vigencia]):::attr
     Attr_StAtivo([st_ativo]):::attr
 
     ParticipanteEdicao --- PK_ParticipanteEdicao
-    ParticipanteEdicao --- FK_Participante_Pessoa
-    ParticipanteEdicao --- FK_Participante_Edicao
-    ParticipanteEdicao --- FK_Participante_Papel
+    %% ParticipanteEdicao --- FK_Participante_Pessoa
+    %% ParticipanteEdicao --- FK_Participante_Edicao
+    %% ParticipanteEdicao --- FK_Participante_Papel
     ParticipanteEdicao --- Attr_DtInicioVigenciaPapel
     ParticipanteEdicao --- Attr_DtFimVigenciaPapel
     ParticipanteEdicao --- Attr_StAtivo
 
     %% Atributos tbl_conflito_interesse
     PK_Conflito([cp_id_conflito]):::pk
-    FK_Conflito_Pessoa([ce_pessoa]):::fk
-    FK_Conflito_Submissao([ce_submissao]):::fk
+    %% FK_Conflito_Pessoa([ce_pessoa]):::fk   -> ligação representada por Rel_Pessoa_Conflito{declara_conflito}
+    %% FK_Conflito_Submissao([ce_submissao]):::fk   -> ligação representada por Rel_Submissao_Conflito{possui_impedimento}
     Attr_TpConflito([tp_conflito]):::attr
     Attr_DtDeclaracaoConflito([dt_declaracao]):::attr
 
     ConflitoInteresse --- PK_Conflito
-    ConflitoInteresse --- FK_Conflito_Pessoa
-    ConflitoInteresse --- FK_Conflito_Submissao
+    %% ConflitoInteresse --- FK_Conflito_Pessoa
+    %% ConflitoInteresse --- FK_Conflito_Submissao
     ConflitoInteresse --- Attr_TpConflito
     ConflitoInteresse --- Attr_DtDeclaracaoConflito
 
     %% Atributos tbl_preferencia_revisao
     PK_Preferencia([cp_id_preferencia]):::pk
-    FK_Preferencia_Pessoa([ce_pessoa]):::fk
-    FK_Preferencia_Submissao([ce_submissao]):::fk
+    %% FK_Preferencia_Pessoa([ce_pessoa]):::fk   -> ligação representada por Rel_Pessoa_Preferencia{indica_interesse}
+    %% FK_Preferencia_Submissao([ce_submissao]):::fk   -> ligação representada por Rel_Submissao_Preferencia{alvo_preferencia}
     Attr_NivelInteresse([nivel_interesse]):::attr
 
     PreferenciaRevisao --- PK_Preferencia
-    PreferenciaRevisao --- FK_Preferencia_Pessoa
-    PreferenciaRevisao --- FK_Preferencia_Submissao
+    %% PreferenciaRevisao --- FK_Preferencia_Pessoa
+    %% PreferenciaRevisao --- FK_Preferencia_Submissao
     PreferenciaRevisao --- Attr_NivelInteresse
 
-    %% Atributos tbl_submissao_topico
-    FK_SubTopico_Submissao([ce_submissao]):::fk
-    FK_SubTopico_Topico([ce_topico]):::fk
+    %% REMOVIDO (seção 1) - duplicava 'abrange'
+    %% %% Atributos tbl_submissao_topico
+    %% FK_SubTopico_Submissao([ce_submissao]):::fk
+    %% FK_SubTopico_Topico([ce_topico]):::fk
 
-    SubmissaoTopico --- FK_SubTopico_Submissao
-    SubmissaoTopico --- FK_SubTopico_Topico
+    %% SubmissaoTopico --- FK_SubTopico_Submissao
+    %% SubmissaoTopico --- FK_SubTopico_Topico
 
+    %% REMOVIDO - tbl_pessoa_topico (nivel_expertise agora é atributo do losango expertise_em)
     %% Atributos tbl_pessoa_topico
-    FK_PessoaTopico_Pessoa([ce_pessoa]):::fk
-    FK_PessoaTopico_Topico([ce_topico]):::fk
-    Attr_NivelExpertise([nivel_expertise]):::attr
+    %% FK_PessoaTopico_Pessoa([ce_pessoa]):::fk
+    %% FK_PessoaTopico_Topico([ce_topico]):::fk
+    %% Attr_NivelExpertise([nivel_expertise]):::attr
+    %% PessoaTopico --- FK_PessoaTopico_Pessoa
+    %% PessoaTopico --- FK_PessoaTopico_Topico
+    %% PessoaTopico --- Attr_NivelExpertise
 
-    PessoaTopico --- FK_PessoaTopico_Pessoa
-    PessoaTopico --- FK_PessoaTopico_Topico
-    PessoaTopico --- Attr_NivelExpertise
+    %% ===== NOVOS ATRIBUTOS - SEÇÃO 1 =====
+    %% Atributos tbl_rodada_avaliacao (entidade fraca de tbl_submissao)
+    %% nr_rodada é chave PARCIAL: "rodada 2" só é única dentro da mesma submissão
+    PKP_NrRodada([nr_rodada]):::pkp
+    Attr_DtInicioRodada([dt_inicio_rodada]):::attr
+    Attr_DtFimRodada([dt_fim_rodada]):::attr
+    Attr_StatusRodada([status_rodada]):::attr
+
+    RodadaAvaliacao --- PKP_NrRodada
+    RodadaAvaliacao --- Attr_DtInicioRodada
+    RodadaAvaliacao --- Attr_DtFimRodada
+    RodadaAvaliacao --- Attr_StatusRodada
+
+    %% Atributos tbl_historico_status_submissao (entidade fraca de tbl_submissao)
+    %% dt_alteracao_status é chave PARCIAL (data e hora): identifica a mudança dentro da submissão
+    %% Não há status_anterior: ele é o status_novo do registro anterior (seria dado derivado/redundante)
+    PKP_DtAlteracaoStatus([dt_alteracao_status]):::pkp
+    Attr_StatusNovo([status_novo]):::attr
+    Attr_DsMotivoAlteracao([ds_motivo_alteracao]):::attr
+
+    HistoricoStatusSubmissao --- PKP_DtAlteracaoStatus
+    HistoricoStatusSubmissao --- Attr_StatusNovo
+    HistoricoStatusSubmissao --- Attr_DsMotivoAlteracao
