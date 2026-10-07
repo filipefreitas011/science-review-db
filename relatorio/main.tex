@@ -1,0 +1,227 @@
+% =====================================================================
+% Relatorio do Marco 1 (MIBD) -- MATA60 -- Caso ScienceReview
+% Formatacao segundo "Instructions for Authors of SBC Book Chapters":
+%   A4, coluna unica, margens 3,5 (sup.) / 2,5 (inf.) / 3,0 (laterais),
+%   Times 12pt, 6pt antes de cada paragrafo, recuo de 1,27 cm,
+%   secoes em negrito 13pt, subsecoes em negrito 12pt,
+%   legendas em Helvetica 10pt negrito, legenda de tabela acima,
+%   numeracao "capitulo.sequencia", sem numero de pagina.
+% Trechos marcados com \pendente{...} precisam ser preenchidos.
+% =====================================================================
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{mathptmx}
+\usepackage[scaled=0.92]{helvet}
+\usepackage[a4paper,top=3.5cm,bottom=2.5cm,left=3cm,right=3cm]{geometry}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{url}
+\usepackage[square]{natbib}
+\usepackage[hidelinks]{hyperref}
+
+% ---------- Pagina e paragrafos ----------
+\pagestyle{empty}
+\setlength{\parindent}{1.27cm}
+\setlength{\parskip}{6pt}
+
+% ---------- Secoes (capitulo 1) ----------
+\renewcommand{\thesection}{1.\arabic{section}}
+\titleformat{\section}{\normalfont\fontsize{13}{15}\selectfont\bfseries}{\thesection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{18pt}{6pt}
+\titleformat{\subsection}{\normalfont\fontsize{12}{14}\selectfont\bfseries}{\thesubsection.}{0.5em}{}
+\titlespacing*{\subsection}{0pt}{12pt}{6pt}
+
+% ---------- Figuras, tabelas e legendas ----------
+\renewcommand{\thefigure}{1.\arabic{figure}}
+\renewcommand{\thetable}{1.\arabic{table}}
+\captionsetup{font={footnotesize,sf,bf},labelsep=period,justification=justified,
+  singlelinecheck=true,margin=0.8cm,skip=6pt}
+\captionsetup[table]{position=top}
+
+% ---------- Citacoes no estilo [Autor Ano] ----------
+\setcitestyle{square,aysep={},yysep={,}}
+
+% ---------- Utilitarios ----------
+\newcommand{\pendente}[1]{\textbf{[PENDENTE: #1]}}
+\newcommand{\tb}[1]{\texttt{#1}}
+\newcommand{\rel}[1]{\textsf{#1}}
+
+\begin{document}
+\thispagestyle{empty}
+
+% =====================================================================
+% Primeira pagina
+% =====================================================================
+\begin{flushleft}
+{\fontsize{20}{24}\selectfont\bfseries Capítulo}\\[4pt]
+{\fontsize{48}{52}\selectfont\bfseries 1}\\[1.4cm]
+{\fontsize{20}{24}\selectfont\bfseries ScienceReview: modelagem e implantação de um banco de dados para gestão de submissões e avaliação científica}\\[1cm]
+{\large Filipe, Larissa, Leticia, Lucas e Lucy (completar)}\\[4pt]
+{\normalsize Instituto de Computação -- Universidade Federal da Bahia (UFBA)\\
+Av. Milton Santos, s/n -- Campus de Ondina -- Salvador -- BA, 40170-110}
+\end{flushleft}
+
+\vspace{1cm}
+
+\begin{center}\textbf{\textit{Abstract}}\end{center}
+\vspace{-6pt}
+{\leftskip=0.8cm\rightskip=0.8cm\noindent\itshape
+This chapter presents the conceptual modeling, logical modeling and PostgreSQL
+deployment of the database for ScienceReview, an information system for managing
+scientific submissions and peer review. The scope covers the core review cycle:
+authorship, scientific topics, reviewer expertise, review assignment, reviews and
+final decisions. Each of the 45 original requirements is classified as met, partially
+met or out of scope, with a justification and a traceability table linking
+requirements to entities and relationships.\par}
+
+\begin{center}\textbf{\textit{Resumo}}\end{center}
+\vspace{-6pt}
+{\leftskip=0.8cm\rightskip=0.8cm\noindent\itshape
+Este capítulo apresenta a modelagem conceitual, a modelagem lógica e a implantação
+em PostgreSQL do banco de dados do ScienceReview, um sistema de informação para
+gestão de submissões e avaliação científica. O recorte cobre o núcleo do ciclo de
+avaliação: autoria, tópicos científicos, expertise de revisores, atribuição de
+revisões, revisões e decisões finais. Cada um dos 45 requisitos originais é
+classificado como atendido, parcialmente atendido ou fora do escopo, com
+justificativa e uma tabela de rastreabilidade entre requisitos, entidades e
+relacionamentos.\par}
+
+% =====================================================================
+\section{Introdução}
+% =====================================================================
+\pendente{escrever a introdução} \citep{ufba2026caso}.
+
+% =====================================================================
+\section{Descritivo do Projeto}\label{sec:descritivo}
+% =====================================================================
+
+\subsection{Problema}
+\pendente{descrever o problema} \citep{ufba2026caso}.
+
+\subsection{Objetivos}
+
+\subsection{Extensão proposta}
+
+% =====================================================================
+\section{Requisitos}\label{sec:requisitos}
+% =====================================================================
+
+{\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.9cm}
+                  >{\raggedright\arraybackslash}p{3.1cm}
+                  >{\raggedright\arraybackslash}p{1.8cm}
+                  >{\raggedright\arraybackslash}p{7.6cm}}
+\caption{Situação de cada requisito no modelo e justificativa.}\label{tab:requisitos}\\
+\toprule
+\textbf{RF} & \textbf{Requisito} & \textbf{Situação} & \textbf{Justificativa e elementos do modelo}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{RF} & \textbf{Requisito} & \textbf{Situação} & \textbf{Justificativa e elementos do modelo}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+RF1 & Eventos e edições & Parcial & \tb{tbl\_evento} guarda \tb{ano\_edicao}; edição não é entidade própria (Seção~\ref{sec:decisoes}). \\
+RF2 & Trilhas & Parcial & \tb{nm\_trilha} é atributo de \tb{tbl\_evento}; regras, comitê e formulários por trilha ficam fora do recorte. \\
+RF3 & Usuários & Atendido & \tb{tbl\_pessoa} é única na plataforma, com \tb{email\_principal} único; papéis vêm dos relacionamentos. \\
+RF4 & Papéis contextuais & Parcial & Autor (\rel{É\_Autor}) e revisor (\rel{É\_Revisor}) dependem da submissão; coordenadores de trilha e de programa ficam fora do recorte. \\
+RF5 & Instituições & Parcial & \rel{Pertence} associa cada pessoa a uma instituição atual; o histórico de vínculos fica fora do recorte. \\
+RF6 & Submissões & Atendido & \tb{tbl\_submissao} tem título, resumo, idioma, data de registro e status; pertence a um único evento/trilha (\rel{Recebe}, 1:N). \\
+RF7 & Autoria & Atendido & \rel{É\_Autor} exige ao menos um autor por submissão e guarda \tb{ordem\_autoria} e \tb{is\_responsavel}. \\
+RF8 & Alteração de autoria & Fora do escopo & Exige histórico e auditoria de alterações, que não fazem parte do ciclo central. \\
+RF9 & Tópicos & Parcial & \rel{Aborda} relaciona submissões e tópicos (N:N); o tópico não é vinculado à trilha que o define. \\
+RF10 & Perfil de expertise & Atendido & \rel{Tem\_Expertise} relaciona pessoa e tópico com \tb{nivel\_expertise}. \\
+RF11 & Versões & Fora do escopo & Cada submissão guarda um único arquivo (\tb{nm\_arquivo\_pdf}); ver Seção~\ref{sec:decisoes}. \\
+RF12 & Integridade dos arquivos & Fora do escopo & Depende do versionamento (RF11). \\
+RF13 & Processo de revisão & Parcial & Uma submissão recebe várias atribuições e revisões; a quantidade desejada de revisores por trilha não é registrada. \\
+RF14 & Comitê de Programa & Fora do escopo & O recorte trata revisor como papel em \rel{É\_Revisor}, sem modelar o comitê. \\
+RF15 & Atribuição de revisores & Parcial & \rel{É\_Revisor} guarda data (\tb{dt\_atribuicao}) e situação (\tb{status\_aceite}); a origem da atribuição não é registrada. \\
+RF16 & Estratégia de atribuição & Fora do escopo & Depende da origem da atribuição, não registrada no recorte. \\
+RF17 & Carga de revisão & Parcial & A carga é obtida por contagem em \rel{É\_Revisor}; limites de carga não são registrados. \\
+RF18 & Conflitos de interesse & Parcial & \tb{flag\_conflito} sinaliza o conflito na atribuição; o bloqueio prévio à atribuição fica fora do recorte. \\
+RF19 & Origem do conflito & Fora do escopo & O recorte registra apenas a existência do conflito. \\
+RF20 & Temporalidade do conflito & Fora do escopo & Depende de histórico de vínculos (RF5). \\
+RF21 & Formulários de revisão & Fora do escopo & O recorte usa um conjunto fixo de critérios; ver Seção~\ref{sec:decisoes}. \\
+RF22 & Questões de avaliação & Fora do escopo & Idem RF21. \\
+RF23 & Tipos de resposta & Fora do escopo & Idem RF21; os critérios fixos cobrem apenas notas numéricas e texto livre. \\
+RF24 & Versão do formulário & Fora do escopo & Depende de formulários configuráveis (RF21). \\
+RF25 & Revisões & Parcial & \rel{Gera\_Parecer} liga cada revisão a exatamente uma atribuição e guarda \tb{dt\_revisao}; status da revisão e respostas a formulário ficam fora. \\
+RF26 & Recomendação & Atendido & \tb{recomendacao\_final} em \tb{tbl\_imp\_revisao}. \\
+RF27 & Confidencialidade & Fora do escopo & O parecer é um texto único, sem separação entre comentários aos autores e à coordenação. \\
+RF28 & Rebuttal & Fora do escopo & Etapa opcional por trilha, fora do ciclo central. \\
+RF29 & Discussão & Fora do escopo & Etapa interna do comitê, fora do ciclo central. \\
+RF30 & Rodadas de avaliação & Fora do escopo & O recorte considera uma única rodada. \\
+RF31 & Decisão & Atendido & \tb{tbl\_imp\_decisao} guarda resultado e data; o responsável vem de \rel{Emite}. \\
+RF32 & Histórico de decisão & Fora do escopo & O recorte guarda uma decisão por submissão (\rel{Recebe\_Veredito}, 0..1). \\
+RF33 & Modalidade diferente & Fora do escopo & Depende de modalidades por trilha, não modeladas. \\
+RF34 & Notificação & Fora do escopo & Comunicações ficam a cargo da aplicação. \\
+RF35 & Versão final & Fora do escopo & Depende do versionamento (RF11). \\
+RF36 & Documentos adicionais & Fora do escopo & Depende do versionamento (RF11). \\
+RF37 & Prazos & Parcial & Apenas o período de submissão (\tb{dt\_inicio\_submissao}, \tb{dt\_fim\_submissao}). \\
+RF38 & Exceções de prazo & Fora do escopo & Depende dos demais prazos (RF37). \\
+RF39 & Anonimização & Fora do escopo & Política de anonimato por trilha não é modelada. \\
+RF40 & Controle de acesso & Parcial & Os papéis por submissão permitem decidir o acesso; fase do processo e coordenação ficam fora. \\
+RF41 & Auditoria & Fora do escopo & Exige registro de operações, fora do ciclo central. \\
+RF42 & Indicadores gerenciais & Parcial & Suportados: i, ii, iii, vii, viii (conflitos sinalizados), ix, x, xi, xii, xiii e xv. Não suportados: iv, v, vi e xiv. \\
+RF43 & Reprodutibilidade & Fora do escopo & Exige histórico de estados, versões e decisões. \\
+RF44 & Integridade & Parcial & Chaves, unicidade, integridade referencial e restrições de domínio no DDL; regras entre tabelas (ex.: ao menos um autor responsável) não são garantidas por restrição declarativa. \\
+RF45 & Escalabilidade & Avaliado na implantação & Depende do modelo físico (índices e volume de dados), tratado nas Seções~\ref{sec:implantacao} e~\ref{sec:populacao}. \\
+\end{longtable}
+}
+
+% =====================================================================
+\section{Minimundo}\label{sec:minimundo}
+% =====================================================================
+
+\subsection{Descrição do minimundo}
+
+\subsection{Decisões sobre o texto base}\label{sec:decisoes}
+
+\subsection{Questões da Seção 1.5 do enunciado}
+
+% =====================================================================
+\section{Modelagem}\label{sec:modelagem}
+% =====================================================================
+
+\subsection{Modelo conceitual}
+
+\subsection{Modelo lógico}
+
+% =====================================================================
+\section{Rastreabilidade}\label{sec:rastreabilidade}
+% =====================================================================
+
+% =====================================================================
+\section{Implantação}\label{sec:implantacao}
+% =====================================================================
+
+% =====================================================================
+\section{População e exploração de metadados}\label{sec:populacao}
+% =====================================================================
+
+% =====================================================================
+% Referencias
+% =====================================================================
+\renewcommand{\refname}{Referências}
+\bibliographystyle{apalike}
+\bibliography{referencias}
+
+% =====================================================================
+% Anexos
+% =====================================================================
+\section*{Anexo A -- Script DDL}
+
+\section*{Anexo B -- Roteiro de reprodução}
+
+\section*{Anexo C -- Materiais externos}
+
+\end{document}
