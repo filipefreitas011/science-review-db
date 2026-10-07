@@ -103,12 +103,19 @@ relacionamentos.\par}
 % =====================================================================
 
 \subsection{Problema}
-\pendente{descrever o problema} \citep{ufba2026caso}.
+Com o crescimento exponencial das conferências científicas da Sociedade Brasileira de Tecnologia e Computação (SBTC), o processo manual de triagem e avaliação de artigos se tornou insustentável. O problema central a ser resolvido, neste projeto, reside no gargalo de alocação e metrificação da avaliação por pares (\textit{Peer Review}). A coordenação enfrenta dificuldades logísticas para cruzar a temática dos milhares de artigos submetidos com a área de domínio dos revisores que estão disponíveis, além de carecer de métricas padronizadas para ranquear os trabalhos e embasar decisões finais de aceite ou rejeição de forma otimizada e livre de vieses.
 
 \subsection{Objetivos}
+O objetivo central deste projeto é modelar e implementar um banco de dados relacional otimizado para a gestão do núcleo do processo de revisão por pares. De maneira objetiva, o sistema visa:
+\begin{itemize}
+    \item Garantir o registro único e rastreável de autores e revisores;
+    \item Facilitar o \textit{matchmaking} de expertise, cruzando os tópicos das submissões com as áreas de domínio dos avaliadores;
+    \item Monitorar o ciclo de atribuição, prevenindo sobrecarga de revisores e flagrando conflitos de interesse;
+    \item Consolidar pareceres em uma estrutura estritamente normalizada, permitindo a extração de indicadores gerenciais e o ranqueamento automatizado de submissões.
+\end{itemize}
 
 \subsection{Extensão proposta}
-
+A extensão proposta foca-se na otimização do banco de dados para consultas analíticas complexas. Ao invés de construir um repositório logístico genérico de eventos, o sistema foi desenhado para atuar como um motor de dados focado na etapa de avaliação. O modelo adota técnicas de estruturação de atributos fixos de revisão para garantir a performance em operações de álgebra relacional,além de funções de agregação e geração de métricas de qualidade científica.
 % =====================================================================
 \section{Requisitos}\label{sec:requisitos}
 % =====================================================================
@@ -183,16 +190,56 @@ RF45 & Escalabilidade & Avaliado na implantação & Depende do modelo físico (�
 % =====================================================================
 
 \subsection{Descrição do minimundo}
+O minimundo delimitado para este projeto restringe o escopo do \textit{ScienceReview} exclusivamente ao núcleo analítico do ciclo de submissão e avaliação por pares. O fluxo foi condensado em 11 tabelas estruturais, englobando o cadastro unificado de pesquisadores e instituições, a submissão de trabalhos (autoria e categorização por tópicos), a alocação de revisores baseada em expertise, e a materialização das avaliações e vereditos. Foram deixadas fora do escopo as complexidades logísticas de versionamento contínuo de arquivos, o fluxo hierárquico de comitês de programa, anonimização, notificações externas e a customização dinâmica de etapas como \textit{rebuttal} e discussão.
 
 \subsection{Decisões sobre o texto base}\label{sec:decisoes}
+Para viabilizar a execução performática de consultas analíticas e otimizações algébricas, duas decisões arquiteturais importantes foram tomadas sobre a especificação original:
+\begin{enumerate}
+    \item \textbf{Achatamento da Hierarquia de Eventos:} A hierarquia de Evento, Edição e Trilha foi desnormalizada em uma única relação consolidada (\texttt{tbl\_evento}). Essa decisão elimina a necessidade de junções (\textit{JOINs}) em cascata, recuperando a performance sem perder os metadados necessários para classificar e agrupar os artigos por ano e área temática.
+    \item \textbf{Conversão de Formulários Dinâmicos para Atributos Fixos:} O módulo de formulários dinâmicos (que exigiria um antipadrão \textit{Entity-Attribute-Value}) foi refatorado. Extraímos exemplos de critérios do texto base (originalidade, metodologia e relevância) e os materializamos como colunas numéricas rígidas na tabela \texttt{tbl\_imp\_revisao}. Esta decisão abdica da flexibilidade logística em prol do altíssimo desempenho em funções de agregação (\texttt{AVG}, \texttt{SUM}), essenciais para o ranqueamento de trabalhos.
+    \item \textbf{Separação Temporal de Atribuição e Parecer:} A modelagem dividiu o ato de convidar o revisor (relacionamento \textsf{É\_Revisor}) e a entrega do parecer (\texttt{tbl\_imp\_revisao}), evitando a persistência de colunas vazias (\textit{NULL}) no banco de dados durante o período em que o convite encontra-se pendente ou nos casos em que é recusado.
+\end{enumerate}
 
 \subsection{Questões da Seção 1.5 do enunciado}
+As questões levantadas na especificação original serviram de guia para a delimitação do minimundo. Abaixo, apresentamos as resoluções adotadas pelo grupo com base no recorte analítico do modelo:
+\vspace{6pt}
+\noindent\textbf{Identidade e Autoria}
+\begin{itemize}
+    \item \textbf{Mudança de instituição após submissão:} No escopo deste minimundo, a relação \rel{Pertence} entre pesquisador e instituição foi fixada com cardinalidade máxima (1, 1) do lado da pessoa. Logo, não há historização de vínculos e os relatórios refletirão a instituição atual associada ao cadastro no momento da consulta.
+    \item \textbf{Duas instituições simultâneas:} Pela mesma restrição estrutural (1, 1), o modelo exige que o pesquisador registre apenas a sua afiliação primária & principal para efeitos de pura avaliação.
+    \item \textbf{Representação da ordem dos autores:} O problema foi resolvido através da alocação do atributo \tb{ordem\_autoria} diretamente no relacionamento associativo N:M \rel{É\_Autor} (futura \tb{tbl\_autor\_submissao}), garantindo o ranqueamento preciso sem alterar a tabela de submissões.
+    \item \textbf{Armazenamento de quem adicionou cada autor:} Não é necessário. O escopo de auditoria logada foi removido. Mantém-se apenas o atributo \tb{is\_responsavel} no relacionamento \rel{É\_Autor} para indicar o contato legal do artigo.
+    \item \textbf{Prevenção de cadastros duplicados com e-mails diferentes:} Resolvido estruturalmente através da aplicação de uma restrição de integridade \texttt{UNIQUE} no atributo \tb{cd\_orcid}. Assim, mesmo que o utilizador tente usar um e-mail diferente, a base de dados rejeitará a inserção se o identificador internacional do investigador já existir.
+    \item \textbf{Uso do ORCID e sua obrigatoriedade:} O ORCID \textbf{não é obrigatório} para evitar barreiras de entrada a novos pesquisadores ou até mesmo revisores eventuais. \textbf{Não é utilizado como chave primária} porque chaves naturais em texto podem prejudicar a performance das junções (\textit{JOINs}) em comparação com chaves artificiais numéricas (\tb{bigint}), além de violar a restrição de preenchimento obrigatório (\textit{NOT NULL}). Ele foi modelado como um atributo opcional (\textit{nullable}), mas protegido por uma restrição de unicidade (\textit{UNIQUE}).\end{itemize}
 
+\vspace{6pt}
+\noindent\textbf{Versionamento}
+\begin{itemize}
+    \item \textbf{Um novo upload deve sobrescrever o manuscrito anterior?} No escopo do minimundo simplificado, optou-se por sobrescrever o arquivo (\tb{nm\_arquivo\_pdf} direto na \tb{tbl\_submissao}), eliminando o histórico de envios para focar na análise de revisões.
+    \item \textbf{Como determinar exatamente qual versão foi disponibilizada aos revisores?} Isso exigiria uma tabela dedicada de versões com chave estrangeira na atribuição. Como o versionamento foi escopado para fora, o sistema assume sempre a versão atual, que é estática.
+    \item \textbf{Uma revisão produzida sobre a versão 2 continua válida após o upload da versão 3?} Numa arquitetura completa, sim, pois a revisão aponta para o ID da versão avaliada. No nosso minimundo, como não há múltiplas versões, isso não ocorre.
+    \item \textbf{A versão final é uma nova versão do mesmo objeto ou de outro tipo de artefato?} Logicamente, a versão final difere por ser a versão aceita e formatada, configurando-se como um pós-artefato que, neste recorte de minimundo, fica fora do escopo principal de avaliação.
+    \item \textbf{Quais metadados precisam ser historizados?} Metadados como histórico de títulos, múltiplos arquivos PDF e log de mudança de autores. Nosso grupo optou por não historizá-los, mantendo apenas o estado consolidado para otimizar o banco para consultas analíticas (\textit{Marco 2}).
+\end{itemize}
 % =====================================================================
 \section{Modelagem}\label{sec:modelagem}
 % =====================================================================
 
 \subsection{Modelo conceitual}
+A Figura~\ref{fig:modelo_conceitual} apresenta o Modelo Conceitual do banco de dados \textit{ScienceReview}, construído utilizando a notação clássica de Peter Chen. O diagrama reflete o recorte delimitado na Seção~\ref{sec:minimundo}, contendo as entidades estruturais e as restrições de cardinalidade (mínima e máxima) que garantem a integridade das regras de negócio (como a obrigatoriedade de ao menos um autor e um tópico por submissão).
+Destacam-se as seguintes características técnicas do modelo:
+\begin{itemize}
+    \item \textbf{Atributos em Relacionamentos:} Atributos que pertencem à ação (e não às entidades isoladas) foram alocados diretamente nos losangos, respeitando a notação estrita. Exemplos incluem \tb{ordem\_autoria} no relacionamento \rel{É\_Autor}, \tb{nivel\_expertise} em \rel{Tem\_Expertise} e \tb{flag\_conflito} em \rel{É\_Revisor}.
+    \item \textbf{Entidade Associativa:} Para garantir que a entrega do parecer seja separada do convite formal, o relacionamento \rel{É\_Revisor} foi encapsulado como uma Entidade Associativa. Isto permitiu relacionar o convite à tabela \tb{tbl\_imp\_revisao} (através de \rel{Gera\_Parecer}), evitando o armazenamento de colunas vazias (\textit{NULL}) enquanto a avaliação ainda está pendente.
+    \item \textbf{Relacionamentos Múltiplos:} A modelagem captura a multiplicidade de papéis de um pesquisador relacionando as entidades \tb{tbl\_pessoa} e \tb{tbl\_submissao} através de caminhos semânticos paralelos (\rel{É\_Autor} e \rel{É\_Revisor}), separando a autoria da avaliação cega por pares.
+\end{itemize}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{docs/conceptual_model.jpg}
+    \caption{Modelo Conceitual na notação de Peter Chen (ScienceReview).}
+    \label{fig:modelo_conceitual}
+\end{figure}
 
 \subsection{Modelo lógico}
 
