@@ -53,7 +53,7 @@ CREATE TABLE tbl_submissao (
     idioma_submissao VARCHAR(20) NOT NULL,
     dt_registro TIMESTAMP NOT NULL,
     status_submissao VARCHAR(20),
-    nm_arquico_pdf VARCHAR(200), /* nome do arquivo PDF do manuscrito (atributo nm_arquivo_pdf do modelo conceitual) */
+    nm_arquivo_pdf VARCHAR(200), /* nome do arquivo PDF do manuscrito (atributo nm_arquivo_pdf do modelo conceitual) */
     FOREIGN KEY (ce_trilha) REFERENCES tbl_evento (cp_id_evento) /* ce_trilha referencia tbl_evento pq a trilha é uma linha de tbl_evento (ver comentário em ce_evento_pai) */
 );
 
