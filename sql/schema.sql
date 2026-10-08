@@ -45,17 +45,6 @@ CREATE TABLE tbl_evento (
     FOREIGN KEY (ce_evento_pai) REFERENCES tbl_evento (cp_id_evento)
 );
 
-/*
-REMOVI A TABELA TRILHA POIS A TRILHA É UM SUB-EVENTO, OU SEJA, A TABELA EVENTO SE RELACIONA COM ELA MESMA
-CREATE TABLE tbl_trilha (
-    cp_id_trilha BIGSERIAL PRIMARY KEY,
-    ce_edicao BIGINT NOT NULL,
-    nm_trilha VARCHAR(150) NOT NULL,
-    ds_trilha TEXT,
-    tp_anonimato VARCHAR(20), *coloca esse atributo na tabela evento?*
-    FOREIGN KEY (ce_edicao) REFERENCES tbl_edicao (cd_id_edicao)
-);*/
-
 CREATE TABLE tbl_submissao (
     cp_id_submissao BIGSERIAL PRIMARY KEY,
     ce_trilha BIGINT NOT NULL,
@@ -104,41 +93,6 @@ CREATE TABLE tbl_pessoa_topico (
     FOREIGN KEY (ce_topico) REFERENCES tbl_topico (cp_id_topico)
 );
 
-/*CREATE TABLE tbl_atribuicao_revisao (
-    cp_id_atribuicao BIGSERIAL PRIMARY KEY,
-    ce_submissao BIGINT NOT NULL,
-    ce_revisor BIGINT NOT NULL,
-    dt_atribuicao TIMESTAMP NOT NULL,
-    tp_origem_atribuicao VARCHAR(20) NOT NULL,
-    status_atribuicao VARCHAR(20),
-    dt_resposta TIMESTAMP,
-    FOREIGN KEY (ce_submissao) REFERENCES tbl_submissao (cp_id_submissao),
-    FOREIGN KEY (ce_revisor) REFERENCES tbl_pessoa (cp_id_pessoa)
-);*/
-
-/*CREATE TABLE tbl_formulario_avaliacao (
-    cp_id_formulario BIGSERIAL PRIMARY KEY,
-    ce_trilha BIGINT NOT NULL,
-    nm_formulario VARCHAR(200) NOT NULL,
-    nr_versao INT,
-    dt_inicio_vigencia TIMESTAMP NOT NULL,
-    dt_fim_vigencia TIMESTAMP,
-    FOREIGN KEY (ce_trilha) REFERENCES tbl_trilha (cp_id_trilha)
-);*/
-
-/*CREATE TABLE tbl_questao (
-    cp_id_questao BIGSERIAL PRIMARY KEY,
-    ordem_apresentacao INT NOT NULL,
-    peso_questao FLOAT NOT NULL,
-    ce_formulario BIGINT NOT NULL,
-    nm_questao VARCHAR(500) NOT NULL,
-    ds_questao TEXT,
-    tipo_resposta VARCHAR(20) NOT NULL,
-    obrigatorio BOOLEAN NOT NULL,
-    status_questao VARCHAR(20),
-    FOREIGN KEY (ce_formulario) REFERENCES tbl_formulario_avaliacao (cp_id_formulario)
-);*/
-
 /*TABELA DE RELACIONAMENTO 'É_Revisor' ENTRE PESSOA E SUBMISSÃO, POIS UMA PESSOA PODE SER REVISOR DE VÁRIAS SUBMISSÕES E UMA SUBMISSÃO PODE TER VÁRIOS REVISORES */
 CREATE TABLE tbl_atribuicao_revisao (
     cp_id_atribuicao BIGSERIAL PRIMARY KEY, /* PK substituta (em vez de chave composta ce_pessoa+ce_submissao) pois tbl_imp_revisao precisa referenciar uma atribuição específica (relacionamento Gera_Parecer) */
@@ -149,22 +103,7 @@ CREATE TABLE tbl_atribuicao_revisao (
     flag_conflito BOOLEAN NOT NULL DEFAULT FALSE,
     FOREIGN KEY (ce_pessoa) REFERENCES tbl_pessoa (cp_id_pessoa),
     FOREIGN KEY (ce_submissao) REFERENCES tbl_submissao (cp_id_submissao)
-    /* TODO: avaliar UNIQUE (ce_pessoa, ce_submissao) - hoje nada impede a mesma pessoa ser atribuída 2x à mesma submissão, já que a PK é substituta */
 );
-
-/*CREATE TABLE tbl_revisao (
-    cp_id_revisao BIGSERIAL PRIMARY KEY,
-    ce_atribuicao BIGINT NOT NULL,
-    ce_formulario BIGINT NOT NULL,
-    dt_inicio TIMESTAMP NOT NULL,
-    dt_submissao TIMESTAMP,
-    status_revisao VARCHAR(20),
-    FOREIGN KEY (ce_atribuicao) REFERENCES tbl_atribuicao_revisao (cp_id_atribuicao),
-    FOREIGN KEY (ce_formulario) REFERENCES tbl_formulario_avaliacao (cp_id_formulario)
-);
-
-CRIEI OUTRA TABELA JÁ QUE ESTAVAM DIVERGINDO MUITO
-*/
 
 CREATE TABLE tbl_imp_revisao (
     cp_id_revisao BIGSERIAL PRIMARY KEY,
@@ -177,20 +116,6 @@ CREATE TABLE tbl_imp_revisao (
     ce_atribuicao BIGINT NOT NULL, /* FK do relacionamento 'Gera_Parecer': o parecer vem de uma atribuição específica (não referencia pessoa/submissão direto, pra não duplicar o que já está em tbl_atribuicao_revisao) */
     FOREIGN KEY (ce_atribuicao) REFERENCES tbl_atribuicao_revisao (cp_id_atribuicao)
 );
-
-/*CREATE TABLE tbl_decisao (
-    cp_id_decisao BIGSERIAL PRIMARY KEY,
-    ce_submissao BIGINT NOT NULL,
-    resultado_decisao VARCHAR(20),
-    ce_responsavel BIGINT NOT NULL,
-    dt_decisao TIMESTAMP,
-    ds_justificativa TEXT,
-    FOREIGN KEY (ce_submissao) REFERENCES tbl_submissao (cp_id_submissao),
-    FOREIGN KEY (ce_responsavel) REFERENCES tbl_pessoa (cp_id_pessoa)
-)
-
-CRIEI OUTRA TABELA JÁ QUE ESTAVAM DIVERGINDO MUITO
-*/
 
 /* Materializa dois relacionamentos do modelo conceitual: Recebe_Veredito (submissão -> decisão, 1:1)
    e Emite (pessoa -> decisão, 1:N) */
