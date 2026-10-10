@@ -63,7 +63,7 @@
 {\fontsize{20}{24}\selectfont\bfseries Capítulo}\\[4pt]
 {\fontsize{48}{52}\selectfont\bfseries 1}\\[1.4cm]
 {\fontsize{20}{24}\selectfont\bfseries ScienceReview: modelagem e implantação de um banco de dados para gestão de submissões e avaliação científica}\\[1cm]
-{\large Filipe, Larissa, Leticia, Lucas e Lucy (completar)}\\[4pt]
+{\large Filipe dos Santos Freitas, Larissa Vitória Maturino Assis, Leticia Silva Oliveira, Lucas dos Santos Lima e Lucy Cassia Cerqueira Silva}\\[4pt]
 {\normalsize Instituto de Computação -- Universidade Federal da Bahia (UFBA)\\
 Av. Milton Santos, s/n -- Campus de Ondina -- Salvador -- BA, 40170-110}
 \end{flushleft}
@@ -74,12 +74,12 @@ Av. Milton Santos, s/n -- Campus de Ondina -- Salvador -- BA, 40170-110}
 \vspace{-6pt}
 {\leftskip=0.8cm\rightskip=0.8cm\noindent\itshape
 This chapter presents the conceptual modeling, logical modeling and PostgreSQL
-deployment of the database for ScienceReview, an information system for managing
+deployment of a subset of the database for ScienceReview, an information system for managing
 scientific submissions and peer review. The scope covers the core review cycle:
 authorship, scientific topics, reviewer expertise, review assignment, reviews and
 final decisions. Each of the 45 original requirements is classified as met, partially
-met or out of scope, with a justification and a traceability table linking
-requirements to entities and relationships.\par}
+met or out of scope, four new requirements are proposed as an extension, and a
+traceability table links requirements to entities and relationships.\par}
 
 \begin{center}\textbf{\textit{Resumo}}\end{center}
 \vspace{-6pt}
@@ -89,33 +89,90 @@ em PostgreSQL do banco de dados do ScienceReview, um sistema de informação par
 gestão de submissões e avaliação científica. O recorte cobre o núcleo do ciclo de
 avaliação: autoria, tópicos científicos, expertise de revisores, atribuição de
 revisões, revisões e decisões finais. Cada um dos 45 requisitos originais é
-classificado como atendido, parcialmente atendido ou fora do escopo, com
-justificativa e uma tabela de rastreabilidade entre requisitos, entidades e
-relacionamentos.\par}
+classificado como atendido, parcialmente atendido ou fora do escopo, quatro
+requisitos novos são propostos como extensão, e uma tabela de rastreabilidade
+relaciona requisitos, entidades e relacionamentos.\par}
 
 % =====================================================================
 \section{Introdução}
 % =====================================================================
-\pendente{escrever a introdução} \citep{ufba2026caso}.
+A Sociedade Brasileira de Tecnologia e Computação (SBTC) promove anualmente dezenas de
+eventos científicos, alguns com milhares de submissões e centenas de pesquisadores, em
+que uma mesma pessoa pode ser autora, revisora ou coordenadora em eventos diferentes.
+Para apoiar esse processo, a SBTC decidiu desenvolver o ScienceReview, um sistema de
+informação que acompanha cada trabalho do registro à decisão final, em eventos
+organizados em edições e trilhas com regras próprias \citep{ufba2026caso}.
+
+Dos 45 requisitos funcionais do enunciado, o grupo delimitou o minimundo ao
+\textbf{ciclo central de avaliação}: uma pessoa submete um trabalho a uma trilha, a
+coordenação o atribui a revisores com expertise nos tópicos da submissão, os revisores
+emitem pareceres e a coordenação registra a decisão. Ficam fora do recorte, com
+justificativa na Seção~\ref{sec:requisitos}, as funcionalidades que dependem de
+histórico ou de configuração por trilha, como versionamento de manuscritos, formulários
+configuráveis, réplica, discussão do comitê e auditoria. O modelo resultante atende,
+total ou parcialmente, 22 dos 45 requisitos originais e os quatro requisitos da
+extensão proposta.
+
+A Seção~\ref{sec:descritivo} descreve o problema, os objetivos e a extensão, e a
+Seção~\ref{sec:requisitos} classifica os requisitos. As Seções~\ref{sec:minimundo}
+a~\ref{sec:rastreabilidade} apresentam o minimundo, os modelos conceitual e lógico e a
+rastreabilidade entre modelo e requisitos. As Seções~\ref{sec:implantacao}
+e~\ref{sec:populacao} tratam da implantação em PostgreSQL \citep{postgresql}, da
+população e dos metadados, e os anexos trazem os scripts e o roteiro de reprodução.
+
 
 % =====================================================================
 \section{Descritivo do Projeto}\label{sec:descritivo}
 % =====================================================================
 
 \subsection{Problema}
-Com o crescimento exponencial das conferências científicas da Sociedade Brasileira de Tecnologia e Computação (SBTC), o processo manual de triagem e avaliação de artigos se tornou insustentável. O problema central a ser resolvido, neste projeto, reside no gargalo de alocação e metrificação da avaliação por pares (\textit{Peer Review}). A coordenação enfrenta dificuldades logísticas para cruzar a temática dos milhares de artigos submetidos com a área de domínio dos revisores que estão disponíveis, além de carecer de métricas padronizadas para ranquear os trabalhos e embasar decisões finais de aceite ou rejeição de forma otimizada e livre de vieses.
+Os eventos promovidos pela SBTC recebem trabalhos que precisam ser submetidos,
+distribuídos entre especialistas, avaliados e selecionados antes da publicação. Nos
+maiores eventos, com milhares de submissões e centenas de pesquisadores, a coordenação
+precisa distribuir cada trabalho entre revisores com conhecimento nos seus tópicos, sem
+violar conflitos de interesse, e acompanhar se cada convite foi aceito e se o parecer
+foi entregue. A decisão final considera as avaliações, as recomendações dos revisores e
+outros critérios científicos, e não deve ser reduzida a uma média de notas
+\citep{ufba2026caso}.
+
+O problema central deste projeto é, portanto, a alocação e o acompanhamento da
+avaliação por pares (\textit{peer review}). Sem uma base que relacione pessoas,
+submissões, tópicos, atribuições, revisões e decisões, a coordenação não consegue
+cruzar a temática dos trabalhos com a expertise dos revisores, medir a carga de cada
+revisor nem comparar os pareceres que embasam a decisão.
 
 \subsection{Objetivos}
-O objetivo central deste projeto é modelar e implementar um banco de dados relacional otimizado para a gestão do núcleo do processo de revisão por pares. De maneira objetiva, o sistema visa:
+O objetivo geral deste projeto é modelar e implantar em PostgreSQL um banco de dados
+relacional para o núcleo do processo de revisão por pares do ScienceReview, da
+submissão à decisão final. Os objetivos específicos são:
 \begin{itemize}
-    \item Garantir o registro único e rastreável de autores e revisores;
-    \item Facilitar o \textit{matchmaking} de expertise, cruzando os tópicos das submissões com as áreas de domínio dos avaliadores;
-    \item Monitorar o ciclo de atribuição, prevenindo sobrecarga de revisores e flagrando conflitos de interesse;
-    \item Consolidar pareceres em uma estrutura estritamente normalizada, permitindo a extração de indicadores gerenciais e o ranqueamento automatizado de submissões.
+    \item Manter um cadastro único de pessoas, no qual os papéis de autor e revisor são definidos pela submissão, e não por uma propriedade fixa da pessoa;
+    \item Relacionar os tópicos das submissões à expertise declarada pelos revisores, para apoiar a escolha de revisores;
+    \item Registrar o ciclo de atribuição (convite, aceite, recusa ou remoção), permitindo medir a carga de cada revisor e sinalizar conflitos de interesse;
+    \item Consolidar os pareceres em critérios fixos de avaliação, permitindo extrair indicadores gerenciais que apoiem a decisão da coordenação, sem substituí-la.
 \end{itemize}
 
-\subsection{Extensão proposta}
-A extensão proposta foca-se na otimização do banco de dados para consultas analíticas complexas. Ao invés de construir um repositório logístico genérico de eventos, o sistema foi desenhado para atuar como um motor de dados focado na etapa de avaliação. O modelo adota técnicas de estruturação de atributos fixos de revisão para garantir a performance em operações de álgebra relacional,além de funções de agregação e geração de métricas de qualidade científica.
+\subsection{Extensão proposta}\label{sec:extensao}
+A extensão proposta reforça o papel do ScienceReview como apoio analítico à
+coordenação. Em vez de ampliar a logística de eventos, o grupo acrescenta quatro
+requisitos que exploram os dados já presentes no recorte para apoiar a atribuição e o
+acompanhamento das revisões:
+
+\textbf{RF46 -- Aderência temática:} O sistema deve calcular, para cada par
+revisor--submissão, a aderência entre os tópicos da submissão e os tópicos em que o
+revisor declarou expertise, ponderada pelo nível de expertise, para ordenar os
+candidatos a revisor de cada submissão.
+
+\textbf{RF47 -- Detecção de conflito por autoria e instituição:} O sistema deve
+sinalizar como conflituosa a atribuição em que o revisor é autor da submissão ou está
+vinculado à mesma instituição de algum de seus autores.
+
+\textbf{RF48 -- Tempo de resposta dos revisores:} O sistema deve permitir medir o
+intervalo entre a atribuição e a entrega do parecer, por revisor e por evento.
+
+\textbf{RF49 -- Desempenho por instituição:} O sistema deve produzir indicadores de
+número de submissões e de taxa de aceitação por instituição dos autores.
+
 % =====================================================================
 \section{Requisitos}\label{sec:requisitos}
 % =====================================================================
@@ -137,12 +194,12 @@ A extensão proposta foca-se na otimização do banco de dados para consultas an
 \endhead
 \bottomrule
 \endfoot
-RF1 & Eventos e edições & Parcial & \tb{tbl\_evento} guarda \tb{ano\_edicao}; edição não é entidade própria (Seção~\ref{sec:decisoes}). \\
-RF2 & Trilhas & Parcial & \tb{nm\_trilha} é atributo de \tb{tbl\_evento}; regras, comitê e formulários por trilha ficam fora do recorte. \\
+RF1 & Eventos e edições & Parcial & \tb{tbl\_evento} guarda o evento e \tb{ano\_edicao}; a edição não é entidade própria, e edições de anos diferentes são linhas distintas (Seção~\ref{sec:decisoes}). \\
+RF2 & Trilhas & Parcial & A trilha é uma linha de \tb{tbl\_evento} ligada ao evento principal (\rel{Possui\_Trilha}), com período de submissão e coordenador próprios; regras, comitê, tópicos e formulários por trilha ficam fora do recorte. \\
 RF3 & Usuários & Atendido & \tb{tbl\_pessoa} é única na plataforma, com \tb{email\_principal} único; papéis vêm dos relacionamentos. \\
-RF4 & Papéis contextuais & Parcial & Autor (\rel{É\_Autor}) e revisor (\rel{É\_Revisor}) dependem da submissão; coordenadores de trilha e de programa ficam fora do recorte. \\
-RF5 & Instituições & Parcial & \rel{Pertence} associa cada pessoa a uma instituição atual; o histórico de vínculos fica fora do recorte. \\
-RF6 & Submissões & Atendido & \tb{tbl\_submissao} tem título, resumo, idioma, data de registro e status; pertence a um único evento/trilha (\rel{Recebe}, 1:N). \\
+RF4 & Papéis contextuais & Parcial & Autor (\rel{É\_Autor}) e revisor (\rel{É\_Revisor}) dependem da submissão, e o coordenador (\rel{Coordena}) depende do evento ou da trilha; o coordenador de programa e o comitê ficam fora do recorte. \\
+RF5 & Instituições & Parcial & \rel{Pertence} associa cada pessoa a no máximo uma instituição atual; o histórico de vínculos fica fora do recorte. \\
+RF6 & Submissões & Atendido & \tb{tbl\_submissao} tem título, resumo, idioma, data de registro e status; pertence a uma única trilha (\rel{Recebe}, 1:N). \\
 RF7 & Autoria & Atendido & \rel{É\_Autor} exige ao menos um autor por submissão e guarda \tb{ordem\_autoria} e \tb{is\_responsavel}. \\
 RF8 & Alteração de autoria & Fora do escopo & Exige histórico e auditoria de alterações, que não fazem parte do ciclo central. \\
 RF9 & Tópicos & Parcial & \rel{Aborda} relaciona submissões e tópicos (N:N); o tópico não é vinculado à trilha que o define. \\
@@ -154,7 +211,7 @@ RF14 & Comitê de Programa & Fora do escopo & O recorte trata revisor como papel
 RF15 & Atribuição de revisores & Parcial & \rel{É\_Revisor} guarda data (\tb{dt\_atribuicao}) e situação (\tb{status\_aceite}); a origem da atribuição não é registrada. \\
 RF16 & Estratégia de atribuição & Fora do escopo & Depende da origem da atribuição, não registrada no recorte. \\
 RF17 & Carga de revisão & Parcial & A carga é obtida por contagem em \rel{É\_Revisor}; limites de carga não são registrados. \\
-RF18 & Conflitos de interesse & Parcial & \tb{flag\_conflito} sinaliza o conflito na atribuição; o bloqueio prévio à atribuição fica fora do recorte. \\
+RF18 & Conflitos de interesse & Parcial & \tb{flag\_conflito} sinaliza o conflito na atribuição; o bloqueio prévio à atribuição fica fora do recorte (Seção~\ref{sec:decisoes}). \\
 RF19 & Origem do conflito & Fora do escopo & O recorte registra apenas a existência do conflito. \\
 RF20 & Temporalidade do conflito & Fora do escopo & Depende de histórico de vínculos (RF5). \\
 RF21 & Formulários de revisão & Fora do escopo & O recorte usa um conjunto fixo de critérios; ver Seção~\ref{sec:decisoes}. \\
@@ -166,22 +223,29 @@ RF26 & Recomendação & Atendido & \tb{recomendacao\_final} em \tb{tbl\_imp\_rev
 RF27 & Confidencialidade & Fora do escopo & O parecer é um texto único, sem separação entre comentários aos autores e à coordenação. \\
 RF28 & Rebuttal & Fora do escopo & Etapa opcional por trilha, fora do ciclo central. \\
 RF29 & Discussão & Fora do escopo & Etapa interna do comitê, fora do ciclo central. \\
-RF30 & Rodadas de avaliação & Fora do escopo & O recorte considera uma única rodada. \\
+RF30 & Rodadas de avaliação & Parcial & Uma atribuição pode gerar várias revisões (\rel{Gera\_Parecer}, 1:N), preservadas e ordenadas por \tb{dt\_revisao}; a rodada não é identificada explicitamente. \\
 RF31 & Decisão & Atendido & \tb{tbl\_imp\_decisao} guarda resultado e data; o responsável vem de \rel{Emite}. \\
-RF32 & Histórico de decisão & Fora do escopo & O recorte guarda uma decisão por submissão (\rel{Recebe\_Veredito}, 0..1). \\
+RF32 & Histórico de decisão & Atendido & \rel{Recebe\_Veredito} é 1:N: decisões anteriores são preservadas, cada uma com resultado, data e responsável (\rel{Emite}); a decisão vigente é a mais recente. \\
 RF33 & Modalidade diferente & Fora do escopo & Depende de modalidades por trilha, não modeladas. \\
 RF34 & Notificação & Fora do escopo & Comunicações ficam a cargo da aplicação. \\
 RF35 & Versão final & Fora do escopo & Depende do versionamento (RF11). \\
 RF36 & Documentos adicionais & Fora do escopo & Depende do versionamento (RF11). \\
-RF37 & Prazos & Parcial & Apenas o período de submissão (\tb{dt\_inicio\_submissao}, \tb{dt\_fim\_submissao}). \\
+RF37 & Prazos & Parcial & Períodos de realização (\tb{dt\_inicio}, \tb{dt\_fim}) e de submissão (\tb{dt\_inicio\_submissao}, \tb{dt\_fim\_submissao}) por evento ou trilha; prazos de revisão, réplica, decisão e versão final ficam fora. \\
 RF38 & Exceções de prazo & Fora do escopo & Depende dos demais prazos (RF37). \\
 RF39 & Anonimização & Fora do escopo & Política de anonimato por trilha não é modelada. \\
 RF40 & Controle de acesso & Parcial & Os papéis por submissão permitem decidir o acesso; fase do processo e coordenação ficam fora. \\
 RF41 & Auditoria & Fora do escopo & Exige registro de operações, fora do ciclo central. \\
 RF42 & Indicadores gerenciais & Parcial & Suportados: i, ii, iii, vii, viii (conflitos sinalizados), ix, x, xi, xii, xiii e xv. Não suportados: iv, v, vi e xiv. \\
-RF43 & Reprodutibilidade & Fora do escopo & Exige histórico de estados, versões e decisões. \\
-RF44 & Integridade & Parcial & Chaves, unicidade, integridade referencial e restrições de domínio no DDL; regras entre tabelas (ex.: ao menos um autor responsável) não são garantidas por restrição declarativa. \\
+RF43 & Reprodutibilidade & Fora do escopo & Exige histórico de estados e de versões; apenas revisões e decisões são preservadas. \\
+RF44 & Integridade & Parcial & Chaves primárias, unicidade (e-mail e ORCID) e integridade referencial no DDL; regras entre tabelas (ex.: ao menos um autor responsável) e domínios de status ficam a cargo da aplicação. \\
 RF45 & Escalabilidade & Avaliado na implantação & Depende do modelo físico (índices e volume de dados), tratado nas Seções~\ref{sec:implantacao} e~\ref{sec:populacao}. \\
+\midrule
+\multicolumn{4}{l}{\textbf{Requisitos da extensão (Seção~\ref{sec:extensao})}}\\
+\midrule
+RF46 & Aderência temática & Atendido & \rel{Aborda} e \rel{Tem\_Expertise} ligam submissão e revisor aos mesmos tópicos; \tb{nivel\_expertise} pondera a aderência. \\
+RF47 & Conflito por autoria e instituição & Atendido & \rel{É\_Autor} e \rel{Pertence} permitem detectar o conflito, registrado em \tb{flag\_conflito}; considera apenas a instituição atual (RF5). \\
+RF48 & Tempo de resposta & Atendido & Diferença entre \tb{dt\_atribuicao} (\rel{É\_Revisor}) e \tb{dt\_revisao} (\tb{tbl\_imp\_revisao}), ligadas por \rel{Gera\_Parecer}. \\
+RF49 & Desempenho por instituição & Atendido & \rel{Pertence}, \rel{É\_Autor} e \rel{Recebe\_Veredito} ligam instituição, submissão e decisão; considera apenas a instituição atual (RF5). \\
 \end{longtable}
 }
 
@@ -190,62 +254,187 @@ RF45 & Escalabilidade & Avaliado na implantação & Depende do modelo físico (�
 % =====================================================================
 
 \subsection{Descrição do minimundo}
-O minimundo delimitado para este projeto restringe o escopo do \textit{ScienceReview} exclusivamente ao núcleo analítico do ciclo de submissão e avaliação por pares. O fluxo foi condensado em 11 tabelas estruturais, englobando o cadastro unificado de pesquisadores e instituições, a submissão de trabalhos (autoria e categorização por tópicos), a alocação de revisores baseada em expertise, e a materialização das avaliações e vereditos. Foram deixadas fora do escopo as complexidades logísticas de versionamento contínuo de arquivos, o fluxo hierárquico de comitês de programa, anonimização, notificações externas e a customização dinâmica de etapas como \textit{rebuttal} e discussão.
+O minimundo restringe o ScienceReview ao ciclo central de submissão e avaliação por
+pares. O modelo conceitual tem sete entidades e onze relacionamentos.
+
+O sistema mantém um cadastro único de \textbf{pessoas}. Cada pessoa tem nome, e-mail
+principal único, país e, opcionalmente, um identificador ORCID, também único, e pode
+estar vinculada a uma \textbf{instituição}, identificada por nome, sigla, país, cidade
+e UF.
+
+Cada \textbf{evento} tem sigla, nome, descrição, ano da edição, período de realização,
+período de submissão e uma pessoa coordenadora. Uma trilha é registrada como um evento
+filho, que referencia o evento principal e tem período de submissão e coordenador
+próprios.
+
+Cada \textbf{submissão} pertence a uma única trilha e tem título, resumo, idioma, nome
+do arquivo do manuscrito, data de registro e status. Uma submissão tem um ou mais
+autores, cada um com uma posição na ordem de autoria, e ao menos um deles é
+responsável pela submissão. Uma pessoa pode ser autora de várias submissões. Cada
+submissão aborda um ou mais \textbf{tópicos}, e uma pessoa pode declarar expertise em
+vários tópicos, com um nível para cada um.
+
+A coordenação atribui submissões a pessoas que atuarão como revisoras. Cada atribuição
+registra a data, a situação do convite (pendente, aceito, recusado ou removido) e se há
+conflito de interesses sinalizado. Toda \textbf{revisão} nasce de
+exatamente uma atribuição, e uma atribuição pode gerar mais de uma revisão ao longo do
+processo. A revisão registra data, notas de originalidade, metodologia e relevância,
+parecer textual e recomendação final. Por fim, pessoas da coordenação emitem
+\textbf{decisões} sobre a submissão, cada uma com resultado, data e justificativa
+opcional; uma nova decisão não apaga as anteriores.
+
+Ficam fora do minimundo o versionamento de arquivos, os comitês de programa, os
+formulários configuráveis, a anonimização, as notificações, a
+réplica (\textit{rebuttal}), a discussão interna e a auditoria.
 
 \subsection{Decisões sobre o texto base}\label{sec:decisoes}
-Para viabilizar a execução performática de consultas analíticas e otimizações algébricas, duas decisões arquiteturais importantes foram tomadas sobre a especificação original:
+O grupo tomou as seguintes decisões sobre a especificação original, todas motivadas pelo
+recorte no ciclo central de avaliação:
 \begin{enumerate}
-    \item \textbf{Achatamento da Hierarquia de Eventos:} A hierarquia de Evento, Edição e Trilha foi desnormalizada em uma única relação consolidada (\texttt{tbl\_evento}). Essa decisão elimina a necessidade de junções (\textit{JOINs}) em cascata, recuperando a performance sem perder os metadados necessários para classificar e agrupar os artigos por ano e área temática.
-    \item \textbf{Conversão de Formulários Dinâmicos para Atributos Fixos:} O módulo de formulários dinâmicos (que exigiria um antipadrão \textit{Entity-Attribute-Value}) foi refatorado. Extraímos exemplos de critérios do texto base (originalidade, metodologia e relevância) e os materializamos como colunas numéricas rígidas na tabela \texttt{tbl\_imp\_revisao}. Esta decisão abdica da flexibilidade logística em prol do altíssimo desempenho em funções de agregação (\texttt{AVG}, \texttt{SUM}), essenciais para o ranqueamento de trabalhos.
-    \item \textbf{Separação Temporal de Atribuição e Parecer:} A modelagem dividiu o ato de convidar o revisor (relacionamento \textsf{É\_Revisor}) e a entrega do parecer (\texttt{tbl\_imp\_revisao}), evitando a persistência de colunas vazias (\textit{NULL}) no banco de dados durante o período em que o convite encontra-se pendente ou nos casos em que é recusado.
+    \item \textbf{Evento e trilha na mesma entidade:} O texto base propõe \tb{tbl\_evento}, \tb{tbl\_edicao} e \tb{tbl\_trilha}. Como trilhas e eventos compartilham os mesmos atributos (sigla, nome, períodos e coordenador), a trilha foi modelada como um evento filho, por meio de um autorrelacionamento em \tb{tbl\_evento} (\rel{Possui\_Trilha}). A edição foi reduzida ao atributo \tb{ano\_edicao}, porque nenhum requisito do recorte depende de dados próprios da edição. O custo assumido é que o banco não impede uma trilha de ter suas próprias trilhas, nem uma submissão de apontar para um evento principal; essas regras ficam a cargo da aplicação e serão revistas na normalização do Marco~2.
+    \item \textbf{Coordenador por evento ou trilha:} Cada evento e cada trilha tem uma pessoa coordenadora (\rel{Coordena}), o que atende parcialmente aos papéis contextuais (RF4). O coordenador de programa e o comitê ficam fora do recorte.
+    \item \textbf{Critérios de revisão como atributos fixos:} O módulo de formulários configuráveis, que exigiria um modelo do tipo \textit{Entity-Attribute-Value}, foi substituído por três critérios citados no texto base (originalidade, metodologia e relevância), materializados como colunas numéricas em \tb{tbl\_imp\_revisao}. A decisão abdica da flexibilidade por trilha (RF21--RF24) em favor de consultas de agregação diretas (\texttt{AVG}, \texttt{STDDEV}), que apoiam a comparação de pareceres sem substituir a decisão da coordenação.
+    \item \textbf{Separação entre atribuição e parecer:} O convite ao revisor (\rel{É\_Revisor}) e a entrega do parecer (\tb{tbl\_imp\_revisao}) foram modelados separadamente. Assim, atribuições pendentes ou recusadas não geram linhas de revisão com colunas vazias (\textit{NULL}).
+    \item \textbf{Arquivo único por submissão:} A \tb{tbl\_versao\_submissao} do texto base foi substituída pelo atributo \tb{nm\_arquivo\_pdf} em \tb{tbl\_submissao}. O ciclo central depende apenas do manuscrito vigente, e não do histórico de envios; por isso, RF11, RF12, RF35 e RF36 ficam fora do escopo.
+    \item \textbf{Conflito sinalizado na atribuição:} O conflito de interesses é registrado no atributo \tb{flag\_conflito} de \rel{É\_Revisor}. No recorte, o conflito é avaliado no momento da atribuição; o registro prévio, a origem e a temporalidade do conflito (RF19 e RF20) ficam fora do escopo.
+    \item \textbf{Prefixo de implementação:} Conforme o item 2.1 do enunciado, as entidades de revisão e de decisão receberam o prefixo de implementação: \tb{tbl\_imp\_revisao} e \tb{tbl\_imp\_decisao}.
 \end{enumerate}
 
 \subsection{Questões da Seção 1.5 do enunciado}
-As questões levantadas na especificação original serviram de guia para a delimitação do minimundo. Abaixo, apresentamos as resoluções adotadas pelo grupo com base no recorte analítico do modelo:
+As questões levantadas na especificação original serviram de guia para a delimitação do minimundo. Abaixo, apresentamos as resoluções adotadas pelo grupo com base no recorte do modelo:
 \vspace{6pt}
 \noindent\textbf{Identidade e Autoria}
 \begin{itemize}
-    \item \textbf{Mudança de instituição após submissão:} No escopo deste minimundo, a relação \rel{Pertence} entre pesquisador e instituição foi fixada com cardinalidade máxima (1, 1) do lado da pessoa. Logo, não há historização de vínculos e os relatórios refletirão a instituição atual associada ao cadastro no momento da consulta.
-    \item \textbf{Duas instituições simultâneas:} Pela mesma restrição estrutural (1, 1), o modelo exige que o pesquisador registre apenas a sua afiliação primária & principal para efeitos de pura avaliação.
-    \item \textbf{Representação da ordem dos autores:} O problema foi resolvido através da alocação do atributo \tb{ordem\_autoria} diretamente no relacionamento associativo N:M \rel{É\_Autor} (futura \tb{tbl\_autor\_submissao}), garantindo o ranqueamento preciso sem alterar a tabela de submissões.
-    \item \textbf{Armazenamento de quem adicionou cada autor:} Não é necessário. O escopo de auditoria logada foi removido. Mantém-se apenas o atributo \tb{is\_responsavel} no relacionamento \rel{É\_Autor} para indicar o contato legal do artigo.
-    \item \textbf{Prevenção de cadastros duplicados com e-mails diferentes:} Resolvido estruturalmente através da aplicação de uma restrição de integridade \texttt{UNIQUE} no atributo \tb{cd\_orcid}. Assim, mesmo que o utilizador tente usar um e-mail diferente, a base de dados rejeitará a inserção se o identificador internacional do investigador já existir.
-    \item \textbf{Uso do ORCID e sua obrigatoriedade:} O ORCID \textbf{não é obrigatório} para evitar barreiras de entrada a novos pesquisadores ou até mesmo revisores eventuais. \textbf{Não é utilizado como chave primária} porque chaves naturais em texto podem prejudicar a performance das junções (\textit{JOINs}) em comparação com chaves artificiais numéricas (\tb{bigint}), além de violar a restrição de preenchimento obrigatório (\textit{NOT NULL}). Ele foi modelado como um atributo opcional (\textit{nullable}), mas protegido por uma restrição de unicidade (\textit{UNIQUE}).\end{itemize}
+    \item \textbf{Mudança de instituição após submissão:} No escopo deste minimundo, a relação \rel{Pertence} entre pesquisador e instituição foi fixada com cardinalidade (0, 1) do lado da pessoa: cada pesquisador tem no máximo uma instituição. Logo, não há historização de vínculos e os relatórios refletirão a instituição atual associada ao cadastro no momento da consulta.
+    \item \textbf{Duas instituições simultâneas:} Pela mesma restrição estrutural (0, 1), o pesquisador registra apenas a sua afiliação principal.
+    \item \textbf{Representação da ordem dos autores:} O problema foi resolvido através da alocação do atributo \tb{ordem\_autoria} diretamente no relacionamento N:N \rel{É\_Autor} (tabela \tb{tbl\_pessoa\_submissao}), sem alterar a tabela de submissões.
+    \item \textbf{Armazenamento de quem adicionou cada autor:} Não é necessário. O escopo de auditoria foi removido. Mantém-se apenas o atributo \tb{is\_responsavel} no relacionamento \rel{É\_Autor} para indicar o contato responsável pelo artigo.
+    \item \textbf{Prevenção de cadastros duplicados com e-mails diferentes:} O modelo reduz o risco com restrições de unicidade (\texttt{UNIQUE}) em \tb{email\_principal} e em \tb{cd\_orcid}: um pesquisador que informe o ORCID não consegue se cadastrar novamente com outro e-mail. Como o ORCID é opcional, a duplicidade entre cadastros sem ORCID não é impedida pelo banco e fica a cargo da aplicação.
+    \item \textbf{Uso do ORCID e sua obrigatoriedade:} O ORCID \textbf{não é obrigatório}, para evitar barreiras de entrada a novos pesquisadores ou a revisores eventuais. \textbf{Não é utilizado como chave primária}, porque uma chave primária não pode ser nula e porque chaves naturais textuais tornam as junções (\textit{JOINs}) mais custosas que chaves artificiais numéricas (\tb{bigint}). Ele foi modelado como um atributo opcional (\textit{nullable}), protegido por uma restrição de unicidade (\textit{UNIQUE}).
+\end{itemize}
 
 \vspace{6pt}
 \noindent\textbf{Versionamento}
 \begin{itemize}
     \item \textbf{Um novo upload deve sobrescrever o manuscrito anterior?} No escopo do minimundo simplificado, optou-se por sobrescrever o arquivo (\tb{nm\_arquivo\_pdf} direto na \tb{tbl\_submissao}), eliminando o histórico de envios para focar na análise de revisões.
-    \item \textbf{Como determinar exatamente qual versão foi disponibilizada aos revisores?} Isso exigiria uma tabela dedicada de versões com chave estrangeira na atribuição. Como o versionamento foi escopado para fora, o sistema assume sempre a versão atual, que é estática.
-    \item \textbf{Uma revisão produzida sobre a versão 2 continua válida após o upload da versão 3?} Numa arquitetura completa, sim, pois a revisão aponta para o ID da versão avaliada. No nosso minimundo, como não há múltiplas versões, isso não ocorre.
-    \item \textbf{A versão final é uma nova versão do mesmo objeto ou de outro tipo de artefato?} Logicamente, a versão final difere por ser a versão aceita e formatada, configurando-se como um pós-artefato que, neste recorte de minimundo, fica fora do escopo principal de avaliação.
-    \item \textbf{Quais metadados precisam ser historizados?} Metadados como histórico de títulos, múltiplos arquivos PDF e log de mudança de autores. Nosso grupo optou por não historizá-los, mantendo apenas o estado consolidado para otimizar o banco para consultas analíticas (\textit{Marco 2}).
+    \item \textbf{Como determinar exatamente qual versão foi disponibilizada aos revisores?} Isso exigiria uma tabela dedicada de versões com chave estrangeira na atribuição. Como o versionamento foi escopado para fora, o sistema assume sempre a versão atual.
+    \item \textbf{Uma revisão produzida sobre a versão 2 continua válida após o upload da versão 3?} Numa arquitetura completa, sim, pois a revisão apontaria para o identificador da versão avaliada. No nosso minimundo, como não há múltiplas versões, a situação não ocorre.
+    \item \textbf{A versão final é uma nova versão do mesmo objeto ou de outro tipo de artefato?} Logicamente, a versão final difere por ser a versão aceita e formatada, configurando-se como um pós-artefato que, neste recorte, fica fora do escopo de avaliação.
+    \item \textbf{Quais metadados precisam ser historizados?} Metadados como histórico de títulos, múltiplos arquivos PDF e registro de mudança de autores. O grupo optou por não historizá-los, mantendo apenas o estado consolidado, adequado às consultas analíticas do Marco~2.
 \end{itemize}
+
 % =====================================================================
 \section{Modelagem}\label{sec:modelagem}
 % =====================================================================
 
 \subsection{Modelo conceitual}
-A Figura~\ref{fig:modelo_conceitual} apresenta o Modelo Conceitual do banco de dados \textit{ScienceReview}, construído utilizando a notação clássica de Peter Chen. O diagrama reflete o recorte delimitado na Seção~\ref{sec:minimundo}, contendo as entidades estruturais e as restrições de cardinalidade (mínima e máxima) que garantem a integridade das regras de negócio (como a obrigatoriedade de ao menos um autor e um tópico por submissão).
-Destacam-se as seguintes características técnicas do modelo:
+A Figura~\ref{fig:modelo_conceitual} apresenta o modelo conceitual do banco de dados do
+ScienceReview, construído no brModelo \citep{brmodelo} com a notação de
+\citet{chen1976}, conforme apresentada por \citet{heuser2009}. O diagrama reflete o
+recorte delimitado na Seção~\ref{sec:minimundo} e usa cardinalidades mínimas e máximas
+para expressar regras do minimundo, como a obrigatoriedade de ao menos um autor e um
+tópico por submissão. As Tabelas~\ref{tab:entidades} e~\ref{tab:relacionamentos}
+descrevem as entidades e os relacionamentos.
+
+Destacam-se as seguintes características do modelo:
 \begin{itemize}
-    \item \textbf{Atributos em Relacionamentos:} Atributos que pertencem à ação (e não às entidades isoladas) foram alocados diretamente nos losangos, respeitando a notação estrita. Exemplos incluem \tb{ordem\_autoria} no relacionamento \rel{É\_Autor}, \tb{nivel\_expertise} em \rel{Tem\_Expertise} e \tb{flag\_conflito} em \rel{É\_Revisor}.
-    \item \textbf{Entidade Associativa:} Para garantir que a entrega do parecer seja separada do convite formal, o relacionamento \rel{É\_Revisor} foi encapsulado como uma Entidade Associativa. Isto permitiu relacionar o convite à tabela \tb{tbl\_imp\_revisao} (através de \rel{Gera\_Parecer}), evitando o armazenamento de colunas vazias (\textit{NULL}) enquanto a avaliação ainda está pendente.
-    \item \textbf{Relacionamentos Múltiplos:} A modelagem captura a multiplicidade de papéis de um pesquisador relacionando as entidades \tb{tbl\_pessoa} e \tb{tbl\_submissao} através de caminhos semânticos paralelos (\rel{É\_Autor} e \rel{É\_Revisor}), separando a autoria da avaliação cega por pares.
+    \item \textbf{Atributos em relacionamentos:} Atributos que pertencem à associação, e não às entidades isoladas, foram alocados nos relacionamentos. Exemplos incluem \tb{ordem\_autoria} em \rel{É\_Autor}, \tb{nivel\_expertise} em \rel{Tem\_Expertise} e \tb{flag\_conflito} em \rel{É\_Revisor}.
+    \item \textbf{Entidade associativa:} Para separar a entrega do parecer do convite, o relacionamento \rel{É\_Revisor} foi encapsulado como entidade associativa. Isso permite relacionar o convite à \tb{tbl\_imp\_revisao} por meio de \rel{Gera\_Parecer}, sem armazenar colunas vazias (\textit{NULL}) enquanto a avaliação está pendente.
+    \item \textbf{Relacionamentos múltiplos entre as mesmas entidades:} O modelo captura os diferentes papéis de um pesquisador ligando \tb{tbl\_pessoa} e \tb{tbl\_submissao} por dois relacionamentos paralelos (\rel{É\_Autor} e \rel{É\_Revisor}), que separam a autoria da avaliação.
+    \item \textbf{Autorrelacionamento:} A trilha é representada como um evento filho por meio do relacionamento \rel{Possui\_Trilha}, que liga \tb{tbl\_evento} a ela mesma com os papéis de evento principal e de trilha.
 \end{itemize}
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{docs/conceptual_model.jpg}
-    \caption{Modelo Conceitual na notação de Peter Chen (ScienceReview).}
+    \includegraphics[width=\textwidth]{docs/modelo_conceitual.png}
+    \caption{Modelo conceitual na notação de Peter Chen (ScienceReview).}
     \label{fig:modelo_conceitual}
 \end{figure}
+
+\begin{table}[htbp]
+\caption{Entidades do modelo conceitual.}\label{tab:entidades}
+\centering\small
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.2cm}
+                >{\raggedright\arraybackslash}p{4.4cm}
+                >{\raggedright\arraybackslash}p{6.0cm}}
+\toprule
+\textbf{Entidade} & \textbf{Representa} & \textbf{Atributos (chave em negrito)}\\
+\midrule
+\tb{tbl\_pessoa} & Pesquisadores e usuários & \textbf{cp\_id\_pessoa}, nm\_pessoa, email\_principal, cd\_orcid, pais\_pessoa \\
+\tb{tbl\_instituicao} & Universidades, centros e empresas & \textbf{cp\_id\_instituicao}, nm\_instituicao, sg\_instituicao, pais\_instituicao, cidade\_instituicao, uf\_instituicao \\
+\tb{tbl\_evento} & Evento ou trilha (evento filho) & \textbf{cp\_id\_evento}, sg\_evento, nm\_evento, ds\_evento, ano\_edicao, dt\_inicio, dt\_fim, dt\_inicio\_submissao, dt\_fim\_submissao \\
+\tb{tbl\_submissao} & Trabalho submetido & \textbf{cp\_id\_submissao}, titulo\_submissao, resumo\_submissao, idioma\_submissao, nm\_arquivo\_pdf, dt\_registro, status\_submissao \\
+\tb{tbl\_topico} & Tópico científico & \textbf{cp\_id\_topico}, nm\_topico, ds\_topico \\
+\tb{tbl\_imp\_revisao} & Parecer de um revisor & \textbf{cp\_id\_revisao}, dt\_revisao, nota\_originalidade, nota\_metodologia, nota\_relevancia, parecer\_texto, recomendacao\_final \\
+\tb{tbl\_imp\_decisao} & Decisão sobre a submissão & \textbf{cp\_id\_decisao}, resultado\_decisao, dt\_decisao, ds\_justificativa \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\caption{Relacionamentos do modelo conceitual.}\label{tab:relacionamentos}
+\centering\small
+\begin{tabular}{>{\raggedright\arraybackslash}p{2.6cm}
+                >{\raggedright\arraybackslash}p{4.4cm}
+                >{\raggedright\arraybackslash}p{2.0cm}
+                >{\raggedright\arraybackslash}p{4.2cm}}
+\toprule
+\textbf{Relacionamento} & \textbf{Entidades (cardinalidades)} & \textbf{Tipo} & \textbf{Atributos}\\
+\midrule
+\rel{Pertence} & pessoa (0,1) -- instituição (0,n) & 1:N & -- \\
+\rel{Recebe} & trilha (0,n) -- submissão (1,1) & 1:N & -- \\
+\rel{Possui\_Trilha} & evento principal (0,n) -- trilha (1,1) & 1:N (autorrelacionamento) & -- \\
+\rel{Coordena} & pessoa (0,n) -- evento (1,1) & 1:N & -- \\
+\rel{É\_Autor} & pessoa (0,n) -- submissão (1,n) & N:N & ordem\_autoria, is\_responsavel \\
+\rel{Aborda} & submissão (1,n) -- tópico (0,n) & N:N & -- \\
+\rel{Tem\_Expertise} & pessoa (0,n) -- tópico (0,n) & N:N & nivel\_expertise \\
+\rel{É\_Revisor} & pessoa (0,n) -- submissão (0,n) & N:N (entidade associativa) & dt\_atribuicao, status\_aceite, flag\_conflito \\
+\rel{Gera\_Parecer} & É\_Revisor (0,n) -- revisão (1,1) & 1:N & -- \\
+\rel{Recebe\_Veredito} & submissão (0,n) -- decisão (1,1) & 1:N & -- \\
+\rel{Emite} & pessoa (0,n) -- decisão (1,1) & 1:N & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \subsection{Modelo lógico}
 
 % =====================================================================
 \section{Rastreabilidade}\label{sec:rastreabilidade}
 % =====================================================================
+A Tabela~\ref{tab:rastreabilidade} relaciona cada entidade e cada relacionamento aos
+requisitos que ele atende total ou parcialmente, incluindo os requisitos da extensão.
+Os indicadores do RF42 aparecem entre parênteses.
+
+\begin{table}[htbp]
+\caption{Rastreabilidade entre elementos do modelo e requisitos.}\label{tab:rastreabilidade}
+\centering\small
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.4cm}
+                >{\raggedright\arraybackslash}p{3.0cm}
+                >{\raggedright\arraybackslash}p{7.2cm}}
+\toprule
+\textbf{Elemento} & \textbf{Tipo} & \textbf{Requisitos}\\
+\midrule
+\tb{tbl\_pessoa} & Entidade & RF3, RF4, RF5, RF7, RF10, RF15, RF31, RF47 \\
+\tb{tbl\_instituicao} & Entidade & RF5, RF42 (xv), RF47, RF49 \\
+\tb{tbl\_evento} & Entidade & RF1, RF2, RF4, RF6, RF37, RF42 (i, xi), RF48 \\
+\tb{tbl\_submissao} & Entidade & RF6, RF7, RF9, RF13, RF42 (i, xiii), RF49 \\
+\tb{tbl\_topico} & Entidade & RF9, RF10, RF42 (ii, vii, xii), RF46 \\
+\tb{tbl\_imp\_revisao} & Entidade & RF25, RF26, RF30, RF42 (ix, x), RF48 \\
+\tb{tbl\_imp\_decisao} & Entidade & RF31, RF32, RF42 (xi, xii), RF49 \\
+\rel{Pertence} & Relacionamento 1:N & RF5, RF47, RF49 \\
+\rel{Recebe} & Relacionamento 1:N & RF6 \\
+\rel{Possui\_Trilha} & Autorrelacionamento 1:N & RF1, RF2, RF6 \\
+\rel{Coordena} & Relacionamento 1:N & RF2, RF4, RF40 \\
+\rel{É\_Autor} & Relacionamento N:N & RF4, RF7, RF40, RF42 (xv), RF47, RF49 \\
+\rel{Aborda} & Relacionamento N:N & RF9, RF42 (ii, xii), RF46 \\
+\rel{Tem\_Expertise} & Relacionamento N:N & RF10, RF42 (vii), RF46 \\
+\rel{É\_Revisor} & Entidade associativa & RF4, RF13, RF15, RF17, RF18, RF40, RF42 (iii, viii), RF47, RF48 \\
+\rel{Gera\_Parecer} & Relacionamento 1:N & RF25, RF30, RF48 \\
+\rel{Recebe\_Veredito} & Relacionamento 1:N & RF31, RF32, RF49 \\
+\rel{Emite} & Relacionamento 1:N & RF31 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 % =====================================================================
 \section{Implantação}\label{sec:implantacao}
