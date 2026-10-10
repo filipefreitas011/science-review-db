@@ -1,5 +1,4 @@
 ALTER TABLE tbl_instituicao
-ALTER COLUMN uf_instituicao TYPE VARCHAR(10),
 ALTER COLUMN pais_instituicao TYPE VARCHAR(100),
 ALTER COLUMN sg_instituicao TYPE VARCHAR(100),
 ALTER COLUMN uf_instituicao TYPE VARCHAR(10),
