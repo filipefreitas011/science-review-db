@@ -99,7 +99,7 @@ CREATE TABLE tbl_atribuicao_revisao (
     ce_pessoa BIGINT NOT NULL,
     ce_submissao BIGINT NOT NULL,
     dt_atribuicao TIMESTAMP NOT NULL,
-    status_aceite VARCHAR(20),
+    status_aceite VARCHAR(20), /* 'Pendente', 'Aceito', 'Recusado' ou 'Cancelado' */
     flag_conflito BOOLEAN NOT NULL DEFAULT FALSE,
     FOREIGN KEY (ce_pessoa) REFERENCES tbl_pessoa (cp_id_pessoa),
     FOREIGN KEY (ce_submissao) REFERENCES tbl_submissao (cp_id_submissao)
