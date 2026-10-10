@@ -10,37 +10,54 @@ ESTRATÉGIA DE TRADUÇÃO DO MODELO CONCEITUAL (PDF) PARA O RELACIONAL:
   tbl_pessoa_topico (Tem_Expertise) e tbl_atribuicao_revisao (É_Revisor).
 */
 
+/* Apaga as tabelas (se existirem) para o script poder ser executado de novo no pgAdmin.
+   A ordem é a inversa da criação: primeiro quem tem FK, depois quem é referenciado. */
+DROP TABLE IF EXISTS tbl_imp_decisao;
+DROP TABLE IF EXISTS tbl_imp_revisao;
+DROP TABLE IF EXISTS tbl_atribuicao_revisao;
+DROP TABLE IF EXISTS tbl_pessoa_topico;
+DROP TABLE IF EXISTS tbl_submissao_topico;
+DROP TABLE IF EXISTS tbl_topico;
+DROP TABLE IF EXISTS tbl_pessoa_submissao;
+DROP TABLE IF EXISTS tbl_submissao;
+DROP TABLE IF EXISTS tbl_evento;
+DROP TABLE IF EXISTS tbl_pessoa;
+DROP TABLE IF EXISTS tbl_instituicao;
+
 CREATE TABLE tbl_instituicao (
     cp_id_instituicao BIGSERIAL PRIMARY KEY,
     nm_instituicao VARCHAR (200) NOT NULL,
-    pais_instituicao CHAR(2),
-    sg_instituicao VARCHAR(30),
+    pais_instituicao VARCHAR(100), /* nome do país por extenso (ex.: 'Brasil') */
+    sg_instituicao VARCHAR(100),
     cidade_instituicao VARCHAR(100),
-    uf_instituicao CHAR(2)
+    uf_instituicao VARCHAR(10) /* UF ou província; NULL para instituições fora do Brasil que não usam UF */
 );
 
 CREATE TABLE tbl_pessoa (
     cp_id_pessoa BIGSERIAL PRIMARY KEY,
     nm_pessoa VARCHAR(200) NOT NULL,
     email_principal VARCHAR(254) NOT NULL UNIQUE,
-    cd_orcid VARCHAR(19) UNIQUE,
-    pais_pessoa CHAR(2),
-    ce_instituicao BIGINT, /* FK do relacionamento 'Pertence' (pessoa -> instituição). Cardinalidade (obrigatório x opcional) ainda precisa ser confirmada no diagrama; por ora está opcional (aceita NULL) */
+    cd_orcid VARCHAR(20) UNIQUE, /* opcional (aceita NULL), mas não pode repetir */
+    pais_pessoa VARCHAR(100),
+    ce_instituicao BIGINT, /* FK do relacionamento 'Pertence': cardinalidade (0,1) do lado da pessoa, por isso aceita NULL */
     FOREIGN KEY (ce_instituicao) REFERENCES tbl_instituicao (cp_id_instituicao)
 );
 
 CREATE TABLE tbl_evento (
     cp_id_evento BIGSERIAL PRIMARY KEY,
     ce_evento_pai BIGINT, /* Relacionamento recursivo: trilha é tratada como um "sub-evento", ou seja, uma linha de tbl_evento cujo ce_evento_pai aponta para o evento principal. NULL = evento raiz; preenchido = linha que representa uma trilha */
-    sg_evento VARCHAR(20) NOT NULL UNIQUE,
+    sg_evento VARCHAR(20) NOT NULL,
     nm_evento VARCHAR(200) NOT NULL,
     ano_edicao SMALLINT NOT NULL,
     dt_inicio DATE NOT NULL,
     dt_fim DATE NOT NULL,
     ds_evento TEXT,
-    dt_fim_submissao DATE NOT NULL, 
-    dt_inicio_submissao DATE NOT NULL, 
-    ce_coordenador BIGINT NOT NULL, /*Adicionei pois trilha pede coordenador*/
+    dt_fim_submissao DATE NOT NULL,
+    dt_inicio_submissao DATE NOT NULL,
+    ce_coordenador BIGINT NOT NULL, /* FK do relacionamento 'Coordena': todo evento e toda trilha tem uma pessoa coordenadora */
+    UNIQUE (sg_evento, ano_edicao), /* a mesma sigla pode se repetir em anos diferentes (edições), mas não no mesmo ano */
+    CHECK (dt_fim >= dt_inicio),
+    CHECK (dt_fim_submissao >= dt_inicio_submissao),
     FOREIGN KEY (ce_coordenador) REFERENCES tbl_pessoa (cp_id_pessoa),
     FOREIGN KEY (ce_evento_pai) REFERENCES tbl_evento (cp_id_evento)
 );
@@ -52,18 +69,20 @@ CREATE TABLE tbl_submissao (
     resumo_submissao TEXT NOT NULL,
     idioma_submissao VARCHAR(20) NOT NULL,
     dt_registro TIMESTAMP NOT NULL,
-    status_submissao VARCHAR(20),
+    status_submissao VARCHAR(20) NOT NULL DEFAULT 'submetida'
+        CHECK (status_submissao IN ('submetida', 'em_revisao', 'aceita', 'rejeitada')),
     nm_arquivo_pdf VARCHAR(200), /* nome do arquivo PDF do manuscrito (atributo nm_arquivo_pdf do modelo conceitual) */
     FOREIGN KEY (ce_trilha) REFERENCES tbl_evento (cp_id_evento) /* ce_trilha referencia tbl_evento pq a trilha é uma linha de tbl_evento (ver comentário em ce_evento_pai) */
 );
 
 /* TABELA DE RELACIONAMENTO 'É_Autor' ENTRE PESSOA E SUBMISSÃO, POIS UMA PESSOA PODE TER VÁRIAS SUBMISSÕES E UMA SUBMISSÃO PODE TER VÁRIOS AUTORES */
-CREATE TABLE tbl_pessoa_submissao ( 
+CREATE TABLE tbl_pessoa_submissao (
     ce_pessoa BIGINT NOT NULL,
     ce_submissao BIGINT NOT NULL,
-    ordem_autoria INT NOT NULL, /* posição do autor na lista de autoria (1º, 2º, 3º autor...) */
+    ordem_autoria INT NOT NULL CHECK (ordem_autoria >= 1), /* posição do autor na lista de autoria (1º, 2º, 3º autor...) */
     is_responsavel BOOLEAN NOT NULL, /* marca o(s) autor(es) responsável(is) pela submissão (quem gerencia o envio, recebe notificações etc. - RF7). Atenção: o banco não garante sozinho que pelo menos um autor por submissão tenha TRUE; isso precisa ser checado na aplicação */
     PRIMARY KEY (ce_pessoa, ce_submissao),
+    UNIQUE (ce_submissao, ordem_autoria), /* dois autores da mesma submissão não podem ocupar a mesma posição */
     FOREIGN KEY (ce_pessoa) REFERENCES tbl_pessoa (cp_id_pessoa),
     FOREIGN KEY (ce_submissao) REFERENCES tbl_submissao (cp_id_submissao)
 );
@@ -87,7 +106,7 @@ CREATE TABLE tbl_submissao_topico (
 CREATE TABLE tbl_pessoa_topico (
     ce_pessoa BIGINT NOT NULL,
     ce_topico BIGINT NOT NULL,
-    nivel_expertise VARCHAR(20), /*VARCHAR para baixo/medio/alto e SMALLINT para escala de 1-5, por exemplo*/
+    nivel_expertise SMALLINT NOT NULL CHECK (nivel_expertise BETWEEN 1 AND 5), /* escala de 1 (baixo) a 5 (alto); numérica para servir de peso na aderência temática (RF46) */
     PRIMARY KEY (ce_pessoa, ce_topico),
     FOREIGN KEY (ce_pessoa) REFERENCES tbl_pessoa (cp_id_pessoa),
     FOREIGN KEY (ce_topico) REFERENCES tbl_topico (cp_id_topico)
@@ -99,36 +118,52 @@ CREATE TABLE tbl_atribuicao_revisao (
     ce_pessoa BIGINT NOT NULL,
     ce_submissao BIGINT NOT NULL,
     dt_atribuicao TIMESTAMP NOT NULL,
-    status_aceite VARCHAR(20),
+    status_aceite VARCHAR(20) NOT NULL DEFAULT 'pendente'
+        CHECK (status_aceite IN ('pendente', 'aceito', 'recusado', 'removido')),
     flag_conflito BOOLEAN NOT NULL DEFAULT FALSE,
+    UNIQUE (ce_pessoa, ce_submissao), /* mesmo com a PK substituta, o par revisor+submissão continua único (relacionamento N:N) */
     FOREIGN KEY (ce_pessoa) REFERENCES tbl_pessoa (cp_id_pessoa),
     FOREIGN KEY (ce_submissao) REFERENCES tbl_submissao (cp_id_submissao)
 );
 
 CREATE TABLE tbl_imp_revisao (
     cp_id_revisao BIGSERIAL PRIMARY KEY,
-    nota_metodologia FLOAT NOT NULL,
-    nota_originalidade FLOAT NOT NULL,
-    nota_relevancia FLOAT NOT NULL,
+    nota_metodologia NUMERIC(4,2) NOT NULL CHECK (nota_metodologia BETWEEN 0 AND 10),
+    nota_originalidade NUMERIC(4,2) NOT NULL CHECK (nota_originalidade BETWEEN 0 AND 10),
+    nota_relevancia NUMERIC(4,2) NOT NULL CHECK (nota_relevancia BETWEEN 0 AND 10),
     parecer_texto TEXT NOT NULL,
     dt_revisao TIMESTAMP NOT NULL,
-    recomendacao_final TEXT, /* ta certo ser TEXT?*/
+    recomendacao_final VARCHAR(30) NOT NULL
+        CHECK (recomendacao_final IN ('aceitar', 'aceitar_com_ressalvas', 'rejeitar')),
     ce_atribuicao BIGINT NOT NULL, /* FK do relacionamento 'Gera_Parecer': o parecer vem de uma atribuição específica (não referencia pessoa/submissão direto, pra não duplicar o que já está em tbl_atribuicao_revisao) */
     FOREIGN KEY (ce_atribuicao) REFERENCES tbl_atribuicao_revisao (cp_id_atribuicao)
 );
 
-/* Materializa dois relacionamentos do modelo conceitual: Recebe_Veredito (submissão -> decisão, 1:1)
-   e Emite (pessoa -> decisão, 1:N) */
+/* Materializa dois relacionamentos do modelo conceitual: Recebe_Veredito (submissão -> decisão, 1:N,
+   pois decisões anteriores são preservadas - RF32) e Emite (pessoa -> decisão, 1:N) */
 CREATE TABLE tbl_imp_decisao (
     cp_id_decisao BIGSERIAL PRIMARY KEY,
-    resultado_decisao VARCHAR(20),
+    resultado_decisao VARCHAR(20) NOT NULL
+        CHECK (resultado_decisao IN ('aceita', 'rejeitada', 'revisao_solicitada')),
     ds_justificativa TEXT,
-    dt_decisao TIMESTAMP,
+    dt_decisao TIMESTAMP NOT NULL, /* obrigatória: a decisão vigente é a de data mais recente (RF32) */
     ce_submissao BIGINT NOT NULL, /* FK do relacionamento Recebe_Veredito */
     ce_revisor BIGINT NOT NULL, /* FK do relacionamento Emite: pessoa que emite/decide o veredito */
     FOREIGN KEY (ce_submissao) REFERENCES tbl_submissao (cp_id_submissao),
     FOREIGN KEY (ce_revisor) REFERENCES tbl_pessoa (cp_id_pessoa)
 );
 
-
-
+/*
+ÍNDICES (modelo físico):
+O PostgreSQL cria índice automaticamente para PRIMARY KEY e UNIQUE, mas NÃO para FOREIGN KEY.
+Criamos índices nas FKs usadas nas junções das consultas (RF42, RF46-RF49) que ainda não estão
+cobertas como primeira coluna de uma PK ou UNIQUE. Ex.: em tbl_submissao_topico a PK (ce_submissao, ce_topico)
+já acelera buscas por ce_submissao, mas não por ce_topico.
+*/
+CREATE INDEX idx_pessoa_instituicao ON tbl_pessoa (ce_instituicao);
+CREATE INDEX idx_submissao_trilha ON tbl_submissao (ce_trilha);
+CREATE INDEX idx_submissao_topico_topico ON tbl_submissao_topico (ce_topico);
+CREATE INDEX idx_pessoa_topico_topico ON tbl_pessoa_topico (ce_topico);
+CREATE INDEX idx_atribuicao_submissao ON tbl_atribuicao_revisao (ce_submissao);
+CREATE INDEX idx_revisao_atribuicao ON tbl_imp_revisao (ce_atribuicao);
+CREATE INDEX idx_decisao_submissao ON tbl_imp_decisao (ce_submissao);
