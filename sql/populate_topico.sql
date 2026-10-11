@@ -1,0 +1,22 @@
+INSERT INTO tbl_topico (nm_topico, ds_topico)
+VALUES
+('Bancos de Dados Relacionais', 'Modelagem, SQL e SGBDs relacionais'),
+('Bancos de Dados NoSQL', 'Armazenamento orientado a documentos, grafos e chave-valor'),
+('Mineração de Dados', 'Descoberta de padrões em grandes bases'),
+('Aprendizado de Máquina', 'Modelos supervisionados e não supervisionados'),
+('Processamento de Linguagem Natural', 'Análise e geração de texto'),
+('Visão Computacional', 'Análise de imagens e vídeos'),
+('Engenharia de Requisitos', 'Elicitação e especificação de requisitos'),
+('Testes de Software', 'Verificação e validação de software'),
+('Arquitetura de Software', 'Estilos e padrões arquiteturais'),
+('Manutenção e Evolução de Software', 'Refatoração e dívida técnica'),
+('Redes Definidas por Software', 'SDN e programabilidade de redes'),
+('Internet das Coisas', 'Dispositivos conectados e sensores'),
+('Segurança de Redes', 'Detecção de intrusão e criptografia aplicada'),
+('Computação em Nuvem', 'Infraestrutura e serviços em nuvem'),
+('Sistemas Distribuídos', 'Consenso, replicação e tolerância a falhas'),
+('Interação Humano-Computador', 'Usabilidade e experiência do usuário'),
+('Computação Gráfica', 'Renderização e modelagem geométrica'),
+('Informática na Educação', 'Tecnologia aplicada ao ensino'),
+('Computação Quântica', 'Algoritmos e modelos quânticos'),
+('Ciência de Dados', 'Análise estatística e visualização de dados');
