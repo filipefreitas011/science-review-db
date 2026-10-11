@@ -23,6 +23,7 @@
 \usepackage{longtable}
 \usepackage{array}
 \usepackage{url}
+\usepackage{listings}
 \usepackage[square]{natbib}
 \usepackage[hidelinks]{hyperref}
 
@@ -45,13 +46,35 @@
   singlelinecheck=true,margin=0.8cm,skip=6pt}
 \captionsetup[table]{position=top}
 
+% ---------- Codigos SQL ----------
+% "literate" converte os acentos dos arquivos .sql (UTF-8), que o listings
+% nao aceita diretamente.
+\lstset{language=SQL, basicstyle=\ttfamily\scriptsize, breaklines=true,
+  columns=fullflexible, keepspaces=true, frame=single, upquote=true,
+  keywordstyle=\bfseries, commentstyle=\itshape, showstringspaces=false,
+  literate={á}{{\'a}}1 {à}{{\`a}}1 {â}{{\^a}}1 {ã}{{\~a}}1 {é}{{\'e}}1
+    {ê}{{\^e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ô}{{\^o}}1 {õ}{{\~o}}1 {ú}{{\'u}}1
+    {ç}{{\c c}}1 {Á}{{\'A}}1 {Ã}{{\~A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1
+    {Õ}{{\~O}}1 {Ú}{{\'U}}1 {Ç}{{\c C}}1 {º}{{\textordmasculine}}1}
+\renewcommand{\lstlistingname}{Código}
+% o contador lstlisting so existe a partir do \begin{document}
+\AtBeginDocument{\renewcommand{\thelstlisting}{1.\arabic{lstlisting}}}
+\captionsetup[lstlisting]{position=top}
+
 % ---------- Citacoes no estilo [Autor Ano] ----------
 \setcitestyle{square,aysep={},yysep={,}}
 
 % ---------- Utilitarios ----------
 \newcommand{\pendente}[1]{\textbf{[PENDENTE: #1]}}
-\newcommand{\tb}[1]{\texttt{#1}}
+% \tb: nome de tabela/coluna; permite quebrar a linha depois de cada "_"
+\newcommand{\tbus}{\textunderscore\allowbreak}
+\newcommand{\tb}[1]{{\ttfamily\let\_\tbus #1}}
+\setlength{\emergencystretch}{2em}
 \newcommand{\rel}[1]{\textsf{#1}}
+% Mostra a figura se o arquivo existir; senao, um aviso de pendencia
+% (permite compilar antes de exportar as imagens do brModelo).
+\newcommand{\figura}[1]{\IfFileExists{#1}{\includegraphics[width=\textwidth]{#1}}%
+  {\fbox{\parbox{0.9\textwidth}{\centering\vspace{2cm}\pendente{exportar \texttt{\detokenize{#1}} do brModelo}\vspace{2cm}}}}}
 
 \begin{document}
 \thispagestyle{empty}
@@ -79,7 +102,9 @@ scientific submissions and peer review. The scope covers the core review cycle:
 authorship, scientific topics, reviewer expertise, review assignment, reviews and
 final decisions. Each of the 45 original requirements is classified as met, partially
 met or out of scope, four new requirements are proposed as an extension, and a
-traceability table links requirements to entities and relationships.\par}
+traceability table links requirements to entities and relationships. The database is
+populated with synthetic data, with three tables exceeding five thousand records, and its
+catalog is explored through metadata queries.\par}
 
 \begin{center}\textbf{\textit{Resumo}}\end{center}
 \vspace{-6pt}
@@ -91,7 +116,9 @@ avaliação: autoria, tópicos científicos, expertise de revisores, atribuiçã
 revisões, revisões e decisões finais. Cada um dos 45 requisitos originais é
 classificado como atendido, parcialmente atendido ou fora do escopo, quatro
 requisitos novos são propostos como extensão, e uma tabela de rastreabilidade
-relaciona requisitos, entidades e relacionamentos.\par}
+relaciona requisitos, entidades e relacionamentos. O banco é populado com dados
+sintéticos, com três tabelas acima de cinco mil registros, e seu catálogo é explorado
+por meio de consultas de metadados.\par}
 
 % =====================================================================
 \section{Introdução}
@@ -110,7 +137,7 @@ emitem pareceres e a coordenação registra a decisão. Ficam fora do recorte, c
 justificativa na Seção~\ref{sec:requisitos}, as funcionalidades que dependem de
 histórico ou de configuração por trilha, como versionamento de manuscritos, formulários
 configuráveis, réplica, discussão do comitê e auditoria. O modelo resultante atende,
-total ou parcialmente, 22 dos 45 requisitos originais e os quatro requisitos da
+total ou parcialmente, 23 dos 45 requisitos originais e os quatro requisitos da
 extensão proposta.
 
 A Seção~\ref{sec:descritivo} descreve o problema, os objetivos e a extensão, e a
@@ -200,10 +227,10 @@ RF3 & Usuários & Atendido & \tb{tbl\_pessoa} é única na plataforma, com \tb{e
 RF4 & Papéis contextuais & Parcial & Autor (\rel{É\_Autor}) e revisor (\rel{É\_Revisor}) dependem da submissão, e o coordenador (\rel{Coordena}) depende do evento ou da trilha; o coordenador de programa e o comitê ficam fora do recorte. \\
 RF5 & Instituições & Parcial & \rel{Pertence} associa cada pessoa a no máximo uma instituição atual; o histórico de vínculos fica fora do recorte. \\
 RF6 & Submissões & Atendido & \tb{tbl\_submissao} tem título, resumo, idioma, data de registro e status; pertence a uma única trilha (\rel{Recebe}, 1:N). \\
-RF7 & Autoria & Atendido & \rel{É\_Autor} exige ao menos um autor por submissão e guarda \tb{ordem\_autoria} e \tb{is\_responsavel}. \\
+RF7 & Autoria & Atendido & \rel{É\_Autor} exige ao menos um autor por submissão e guarda \tb{ordem\_autoria} e \tb{ind\_responsavel}. \\
 RF8 & Alteração de autoria & Fora do escopo & Exige histórico e auditoria de alterações, que não fazem parte do ciclo central. \\
 RF9 & Tópicos & Parcial & \rel{Aborda} relaciona submissões e tópicos (N:N); o tópico não é vinculado à trilha que o define. \\
-RF10 & Perfil de expertise & Atendido & \rel{Tem\_Expertise} relaciona pessoa e tópico com \tb{nivel\_expertise}. \\
+RF10 & Perfil de expertise & Atendido & \rel{Tem\_Expertise} relaciona pessoa e tópico com \tb{nivel\_expertise}, em escala de 1 a 5. \\
 RF11 & Versões & Fora do escopo & Cada submissão guarda um único arquivo (\tb{nm\_arquivo\_pdf}); ver Seção~\ref{sec:decisoes}. \\
 RF12 & Integridade dos arquivos & Fora do escopo & Depende do versionamento (RF11). \\
 RF13 & Processo de revisão & Parcial & Uma submissão recebe várias atribuições e revisões; a quantidade desejada de revisores por trilha não é registrada. \\
@@ -211,7 +238,7 @@ RF14 & Comitê de Programa & Fora do escopo & O recorte trata revisor como papel
 RF15 & Atribuição de revisores & Parcial & \rel{É\_Revisor} guarda data (\tb{dt\_atribuicao}) e situação (\tb{status\_aceite}); a origem da atribuição não é registrada. \\
 RF16 & Estratégia de atribuição & Fora do escopo & Depende da origem da atribuição, não registrada no recorte. \\
 RF17 & Carga de revisão & Parcial & A carga é obtida por contagem em \rel{É\_Revisor}; limites de carga não são registrados. \\
-RF18 & Conflitos de interesse & Parcial & \tb{flag\_conflito} sinaliza o conflito na atribuição; o bloqueio prévio à atribuição fica fora do recorte (Seção~\ref{sec:decisoes}). \\
+RF18 & Conflitos de interesse & Parcial & \tb{ind\_conflito} sinaliza o conflito na atribuição; o bloqueio prévio à atribuição fica fora do recorte (Seção~\ref{sec:decisoes}). \\
 RF19 & Origem do conflito & Fora do escopo & O recorte registra apenas a existência do conflito. \\
 RF20 & Temporalidade do conflito & Fora do escopo & Depende de histórico de vínculos (RF5). \\
 RF21 & Formulários de revisão & Fora do escopo & O recorte usa um conjunto fixo de critérios; ver Seção~\ref{sec:decisoes}. \\
@@ -237,13 +264,13 @@ RF40 & Controle de acesso & Parcial & Os papéis por submissão permitem decidir
 RF41 & Auditoria & Fora do escopo & Exige registro de operações, fora do ciclo central. \\
 RF42 & Indicadores gerenciais & Parcial & Suportados: i, ii, iii, vii, viii (conflitos sinalizados), ix, x, xi, xii, xiii e xv. Não suportados: iv, v, vi e xiv. \\
 RF43 & Reprodutibilidade & Fora do escopo & Exige histórico de estados e de versões; apenas revisões e decisões são preservadas. \\
-RF44 & Integridade & Parcial & Chaves primárias, unicidade (e-mail e ORCID) e integridade referencial no DDL; regras entre tabelas (ex.: ao menos um autor responsável) e domínios de status ficam a cargo da aplicação. \\
-RF45 & Escalabilidade & Avaliado na implantação & Depende do modelo físico (índices e volume de dados), tratado nas Seções~\ref{sec:implantacao} e~\ref{sec:populacao}. \\
+RF44 & Integridade & Parcial & Chaves primárias, unicidade (e-mail, ORCID, sigla por edição, revisor por submissão e ordem de autoria), integridade referencial e domínios de status, notas e datas validados por \texttt{CHECK} no DDL; regras que envolvem mais de uma linha ou tabela (ex.: ao menos um autor responsável) ficam a cargo da aplicação. \\
+RF45 & Escalabilidade & Parcial & Índices nas chaves estrangeiras usadas nas junções (Seção~\ref{sec:implantacao}); o volume de teste (Seção~\ref{sec:populacao}) é menor que o de produção, e a análise de desempenho fica para o Marco~2. \\
 \midrule
 \multicolumn{4}{l}{\textbf{Requisitos da extensão (Seção~\ref{sec:extensao})}}\\
 \midrule
-RF46 & Aderência temática & Atendido & \rel{Aborda} e \rel{Tem\_Expertise} ligam submissão e revisor aos mesmos tópicos; \tb{nivel\_expertise} pondera a aderência. \\
-RF47 & Conflito por autoria e instituição & Atendido & \rel{É\_Autor} e \rel{Pertence} permitem detectar o conflito, registrado em \tb{flag\_conflito}; considera apenas a instituição atual (RF5). \\
+RF46 & Aderência temática & Atendido & \rel{Aborda} e \rel{Tem\_Expertise} ligam submissão e revisor aos mesmos tópicos; \tb{nivel\_expertise} (1 a 5) pondera a aderência. \\
+RF47 & Conflito por autoria e instituição & Atendido & \rel{É\_Autor} e \rel{Pertence} permitem detectar o conflito, registrado em \tb{ind\_conflito}; considera apenas a instituição atual (RF5). \\
 RF48 & Tempo de resposta & Atendido & Diferença entre \tb{dt\_atribuicao} (\rel{É\_Revisor}) e \tb{dt\_revisao} (\tb{tbl\_imp\_revisao}), ligadas por \rel{Gera\_Parecer}. \\
 RF49 & Desempenho por instituição & Atendido & \rel{Pertence}, \rel{É\_Autor} e \rel{Recebe\_Veredito} ligam instituição, submissão e decisão; considera apenas a instituição atual (RF5). \\
 \end{longtable}
@@ -296,7 +323,7 @@ recorte no ciclo central de avaliação:
     \item \textbf{Critérios de revisão como atributos fixos:} O módulo de formulários configuráveis, que exigiria um modelo do tipo \textit{Entity-Attribute-Value}, foi substituído por três critérios citados no texto base (originalidade, metodologia e relevância), materializados como colunas numéricas em \tb{tbl\_imp\_revisao}. A decisão abdica da flexibilidade por trilha (RF21--RF24) em favor de consultas de agregação diretas (\texttt{AVG}, \texttt{STDDEV}), que apoiam a comparação de pareceres sem substituir a decisão da coordenação.
     \item \textbf{Separação entre atribuição e parecer:} O convite ao revisor (\rel{É\_Revisor}) e a entrega do parecer (\tb{tbl\_imp\_revisao}) foram modelados separadamente. Assim, atribuições pendentes ou recusadas não geram linhas de revisão com colunas vazias (\textit{NULL}).
     \item \textbf{Arquivo único por submissão:} A \tb{tbl\_versao\_submissao} do texto base foi substituída pelo atributo \tb{nm\_arquivo\_pdf} em \tb{tbl\_submissao}. O ciclo central depende apenas do manuscrito vigente, e não do histórico de envios; por isso, RF11, RF12, RF35 e RF36 ficam fora do escopo.
-    \item \textbf{Conflito sinalizado na atribuição:} O conflito de interesses é registrado no atributo \tb{flag\_conflito} de \rel{É\_Revisor}. No recorte, o conflito é avaliado no momento da atribuição; o registro prévio, a origem e a temporalidade do conflito (RF19 e RF20) ficam fora do escopo.
+    \item \textbf{Conflito sinalizado na atribuição:} O conflito de interesses é registrado no atributo \tb{ind\_conflito} de \rel{É\_Revisor}. No recorte, o conflito é avaliado no momento da atribuição; o registro prévio, a origem e a temporalidade do conflito (RF19 e RF20) ficam fora do escopo.
     \item \textbf{Prefixo de implementação:} Conforme o item 2.1 do enunciado, as entidades de revisão e de decisão receberam o prefixo de implementação: \tb{tbl\_imp\_revisao} e \tb{tbl\_imp\_decisao}.
 \end{enumerate}
 
@@ -305,10 +332,10 @@ As questões levantadas na especificação original serviram de guia para a deli
 \vspace{6pt}
 \noindent\textbf{Identidade e Autoria}
 \begin{itemize}
-    \item \textbf{Mudança de instituição após submissão:} No escopo deste minimundo, a relação \rel{Pertence} entre pesquisador e instituição foi fixada com cardinalidade (0, 1) do lado da pessoa: cada pesquisador tem no máximo uma instituição. Logo, não há historização de vínculos e os relatórios refletirão a instituição atual associada ao cadastro no momento da consulta.
+    \item \textbf{Mudança de instituição após submissão:} No escopo deste minimundo, a relação \rel{Pertence} entre pesquisador e instituição foi fixada com cardinalidade (0, 1) junto à instituição: cada pesquisador tem no máximo uma instituição. Logo, não há historização de vínculos e os relatórios refletirão a instituição atual associada ao cadastro no momento da consulta.
     \item \textbf{Duas instituições simultâneas:} Pela mesma restrição estrutural (0, 1), o pesquisador registra apenas a sua afiliação principal.
     \item \textbf{Representação da ordem dos autores:} O problema foi resolvido através da alocação do atributo \tb{ordem\_autoria} diretamente no relacionamento N:N \rel{É\_Autor} (tabela \tb{tbl\_pessoa\_submissao}), sem alterar a tabela de submissões.
-    \item \textbf{Armazenamento de quem adicionou cada autor:} Não é necessário. O escopo de auditoria foi removido. Mantém-se apenas o atributo \tb{is\_responsavel} no relacionamento \rel{É\_Autor} para indicar o contato responsável pelo artigo.
+    \item \textbf{Armazenamento de quem adicionou cada autor:} Não é necessário. O escopo de auditoria foi removido. Mantém-se apenas o atributo \tb{ind\_responsavel} no relacionamento \rel{É\_Autor} para indicar o contato responsável pelo artigo.
     \item \textbf{Prevenção de cadastros duplicados com e-mails diferentes:} O modelo reduz o risco com restrições de unicidade (\texttt{UNIQUE}) em \tb{email\_principal} e em \tb{cd\_orcid}: um pesquisador que informe o ORCID não consegue se cadastrar novamente com outro e-mail. Como o ORCID é opcional, a duplicidade entre cadastros sem ORCID não é impedida pelo banco e fica a cargo da aplicação.
     \item \textbf{Uso do ORCID e sua obrigatoriedade:} O ORCID \textbf{não é obrigatório}, para evitar barreiras de entrada a novos pesquisadores ou a revisores eventuais. \textbf{Não é utilizado como chave primária}, porque uma chave primária não pode ser nula e porque chaves naturais textuais tornam as junções (\textit{JOINs}) mais custosas que chaves artificiais numéricas (\tb{bigint}). Ele foi modelado como um atributo opcional (\textit{nullable}), protegido por uma restrição de unicidade (\textit{UNIQUE}).
 \end{itemize}
@@ -338,7 +365,7 @@ descrevem as entidades e os relacionamentos.
 
 Destacam-se as seguintes características do modelo:
 \begin{itemize}
-    \item \textbf{Atributos em relacionamentos:} Atributos que pertencem à associação, e não às entidades isoladas, foram alocados nos relacionamentos. Exemplos incluem \tb{ordem\_autoria} em \rel{É\_Autor}, \tb{nivel\_expertise} em \rel{Tem\_Expertise} e \tb{flag\_conflito} em \rel{É\_Revisor}.
+    \item \textbf{Atributos em relacionamentos:} Atributos que pertencem à associação, e não às entidades isoladas, foram alocados nos relacionamentos. Exemplos incluem \tb{ordem\_autoria} em \rel{É\_Autor}, \tb{nivel\_expertise} em \rel{Tem\_Expertise} e \tb{ind\_conflito} em \rel{É\_Revisor}.
     \item \textbf{Entidade associativa:} Para separar a entrega do parecer do convite, o relacionamento \rel{É\_Revisor} foi encapsulado como entidade associativa. Isso permite relacionar o convite à \tb{tbl\_imp\_revisao} por meio de \rel{Gera\_Parecer}, sem armazenar colunas vazias (\textit{NULL}) enquanto a avaliação está pendente.
     \item \textbf{Relacionamentos múltiplos entre as mesmas entidades:} O modelo captura os diferentes papéis de um pesquisador ligando \tb{tbl\_pessoa} e \tb{tbl\_submissao} por dois relacionamentos paralelos (\rel{É\_Autor} e \rel{É\_Revisor}), que separam a autoria da avaliação.
     \item \textbf{Autorrelacionamento:} A trilha é representada como um evento filho por meio do relacionamento \rel{Possui\_Trilha}, que liga \tb{tbl\_evento} a ela mesma com os papéis de evento principal e de trilha.
@@ -346,7 +373,7 @@ Destacam-se as seguintes características do modelo:
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{docs/modelo_conceitual.png}
+    \figura{figuras/modelo_conceitual.png}
     \caption{Modelo conceitual na notação de Peter Chen (ScienceReview).}
     \label{fig:modelo_conceitual}
 \end{figure}
@@ -372,7 +399,7 @@ Destacam-se as seguintes características do modelo:
 \end{table}
 
 \begin{table}[htbp]
-\caption{Relacionamentos do modelo conceitual.}\label{tab:relacionamentos}
+\caption{Relacionamentos do modelo conceitual. A cardinalidade junto a cada entidade indica quantas ocorrências dela se associam a uma ocorrência da outra \citep{heuser2009}.}\label{tab:relacionamentos}
 \centering\small
 \begin{tabular}{>{\raggedright\arraybackslash}p{2.6cm}
                 >{\raggedright\arraybackslash}p{4.4cm}
@@ -381,22 +408,81 @@ Destacam-se as seguintes características do modelo:
 \toprule
 \textbf{Relacionamento} & \textbf{Entidades (cardinalidades)} & \textbf{Tipo} & \textbf{Atributos}\\
 \midrule
-\rel{Pertence} & pessoa (0,1) -- instituição (0,n) & 1:N & -- \\
-\rel{Recebe} & trilha (0,n) -- submissão (1,1) & 1:N & -- \\
-\rel{Possui\_Trilha} & evento principal (0,n) -- trilha (1,1) & 1:N (autorrelacionamento) & -- \\
-\rel{Coordena} & pessoa (0,n) -- evento (1,1) & 1:N & -- \\
-\rel{É\_Autor} & pessoa (0,n) -- submissão (1,n) & N:N & ordem\_autoria, is\_responsavel \\
-\rel{Aborda} & submissão (1,n) -- tópico (0,n) & N:N & -- \\
+\rel{Pertence} & pessoa (0,n) -- instituição (0,1) & 1:N & -- \\
+\rel{Recebe} & trilha (1,1) -- submissão (0,n) & 1:N & -- \\
+\rel{Possui\_Trilha} & evento principal (0,1) -- trilha (0,n) & 1:N (autorrelacionamento) & -- \\
+\rel{Coordena} & pessoa (1,1) -- evento (0,n) & 1:N & -- \\
+\rel{É\_Autor} & pessoa (1,n) -- submissão (0,n) & N:N & ordem\_autoria, ind\_responsavel \\
+\rel{Aborda} & submissão (0,n) -- tópico (1,n) & N:N & -- \\
 \rel{Tem\_Expertise} & pessoa (0,n) -- tópico (0,n) & N:N & nivel\_expertise \\
-\rel{É\_Revisor} & pessoa (0,n) -- submissão (0,n) & N:N (entidade associativa) & dt\_atribuicao, status\_aceite, flag\_conflito \\
-\rel{Gera\_Parecer} & É\_Revisor (0,n) -- revisão (1,1) & 1:N & -- \\
-\rel{Recebe\_Veredito} & submissão (0,n) -- decisão (1,1) & 1:N & -- \\
-\rel{Emite} & pessoa (0,n) -- decisão (1,1) & 1:N & -- \\
+\rel{É\_Revisor} & pessoa (0,n) -- submissão (0,n) & N:N (entidade associativa) & dt\_atribuicao, status\_aceite, ind\_conflito \\
+\rel{Gera\_Parecer} & É\_Revisor (1,1) -- revisão (0,n) & 1:N & -- \\
+\rel{Recebe\_Veredito} & submissão (1,1) -- decisão (0,n) & 1:N & -- \\
+\rel{Emite} & pessoa (1,1) -- decisão (0,n) & 1:N & -- \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\subsection{Modelo lógico}
+\subsection{Modelo lógico}\label{sec:modelo_logico}
+O modelo lógico (Figura~\ref{fig:modelo_logico}) traduz o modelo conceitual para o
+modelo relacional, com 11 relações: as sete entidades e quatro tabelas associativas,
+uma para cada relacionamento N:N. A Tabela~\ref{tab:modelo_logico} lista as colunas
+de cada relação com seus tipos e chaves; as regras usadas na tradução estão na
+Seção~\ref{sec:implantacao}.
+
+A figura foi obtida pela conversão automática do brModelo a partir do modelo
+conceitual, com ajustes manuais de nomes, tipos e chaves. O editor lógico do brModelo
+oferece apenas tipos genéricos (\texttt{INT}, \texttt{VARCHAR} sem tamanho,
+\texttt{FLOAT}, \texttt{DATE}, \texttt{DATETIME} e \texttt{BOOLEAN}) e representa toda
+chave como \texttt{INT}; por isso, a Tabela~\ref{tab:modelo_logico} traz os tipos
+efetivamente usados no PostgreSQL. Duas limitações da ferramenta também afetam a leitura
+da figura: o autorrelacionamento \rel{Possui\_Trilha} aparece apenas como a coluna
+\tb{ce\_evento\_pai}, sem linha desenhada, e as ligações mostram a cardinalidade (1,1)
+junto à tabela referenciada mesmo quando a chave estrangeira é opcional, como em
+\tb{ce\_instituicao} e \tb{ce\_evento\_pai}.
+
+Os nomes seguem um padrão de prefixos: \tb{tbl\_} para tabelas, \tb{tbl\_imp\_} para as
+tabelas de implementação exigidas pelo enunciado, \tb{cp\_} para chave primária,
+\tb{ce\_} para chave estrangeira, \tb{nm\_} para nome, \tb{dt\_} para data, \tb{ds\_}
+para descrição, \tb{sg\_} para sigla e \tb{cd\_} para código. Atributos de
+relacionamento mantêm o nome do modelo conceitual (ex.: \tb{ordem\_autoria},
+\tb{ind\_conflito}).
+
+\begin{figure}[htbp]
+    \centering
+    \figura{figuras/modelo_logico.png}
+    \caption{Modelo lógico do banco de dados do ScienceReview.}
+    \label{fig:modelo_logico}
+\end{figure}
+
+{\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{>{\raggedright\arraybackslash}p{3.4cm}
+                  >{\raggedright\arraybackslash}p{10.2cm}}
+\caption{Relações do modelo lógico. Chave primária em negrito; chaves estrangeiras indicam a relação referenciada (\(\rightarrow\)); NN = \texttt{NOT NULL}.}\label{tab:modelo_logico}\\
+\toprule
+\textbf{Relação} & \textbf{Colunas (tipo e restrições)}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Relação} & \textbf{Colunas (tipo e restrições)}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\tb{tbl\_instituicao} & \textbf{cp\_id\_instituicao} (BIGSERIAL); nm\_instituicao (VARCHAR(200), NN); pais\_instituicao (VARCHAR(100)); sg\_instituicao (VARCHAR(100)); cidade\_instituicao (VARCHAR(100)); uf\_instituicao (VARCHAR(10)) \\
+\tb{tbl\_pessoa} & \textbf{cp\_id\_pessoa} (BIGSERIAL); nm\_pessoa (VARCHAR(200), NN); email\_principal (VARCHAR(254), NN, único); cd\_orcid (VARCHAR(20), único); pais\_pessoa (VARCHAR(100)); ce\_instituicao (BIGINT \(\rightarrow\) tbl\_instituicao) \\
+\tb{tbl\_evento} & \textbf{cp\_id\_evento} (BIGSERIAL); ce\_evento\_pai (BIGINT \(\rightarrow\) tbl\_evento); sg\_evento (VARCHAR(20), NN); nm\_evento (VARCHAR(200), NN); ano\_edicao (SMALLINT, NN); dt\_inicio, dt\_fim, dt\_inicio\_submissao, dt\_fim\_submissao (DATE, NN); ds\_evento (TEXT); ce\_coordenador (BIGINT, NN \(\rightarrow\) tbl\_pessoa). Único: (sg\_evento, ano\_edicao) \\
+\tb{tbl\_submissao} & \textbf{cp\_id\_submissao} (BIGSERIAL); ce\_trilha (BIGINT, NN \(\rightarrow\) tbl\_evento); titulo\_submissao (VARCHAR(500), NN); resumo\_submissao (TEXT, NN); idioma\_submissao (VARCHAR(20), NN); dt\_registro (TIMESTAMP, NN); status\_submissao (VARCHAR(20), NN); nm\_arquivo\_pdf (VARCHAR(200)) \\
+\tb{tbl\_topico} & \textbf{cp\_id\_topico} (BIGSERIAL); nm\_topico (VARCHAR(150), NN); ds\_topico (TEXT) \\
+\tb{tbl\_pessoa\_submissao} (\rel{É\_Autor}) & \textbf{ce\_pessoa} (BIGINT \(\rightarrow\) tbl\_pessoa); \textbf{ce\_submissao} (BIGINT \(\rightarrow\) tbl\_submissao); ordem\_autoria (INT, NN); ind\_responsavel (BOOLEAN, NN). Único: (ce\_submissao, ordem\_autoria) \\
+\tb{tbl\_submissao\_topico} (\rel{Aborda}) & \textbf{ce\_submissao} (BIGINT \(\rightarrow\) tbl\_submissao); \textbf{ce\_topico} (BIGINT \(\rightarrow\) tbl\_topico) \\
+\tb{tbl\_pessoa\_topico} (\rel{Tem\_Expertise}) & \textbf{ce\_pessoa} (BIGINT \(\rightarrow\) tbl\_pessoa); \textbf{ce\_topico} (BIGINT \(\rightarrow\) tbl\_topico); nivel\_expertise (SMALLINT, NN) \\
+\tb{tbl\_atribuicao\_revisao} (\rel{É\_Revisor}) & \textbf{cp\_id\_atribuicao} (BIGSERIAL); ce\_pessoa (BIGINT, NN \(\rightarrow\) tbl\_pessoa); ce\_submissao (BIGINT, NN \(\rightarrow\) tbl\_submissao); dt\_atribuicao (TIMESTAMP, NN); status\_aceite (VARCHAR(20), NN); ind\_conflito (BOOLEAN, NN). Único: (ce\_pessoa, ce\_submissao) \\
+\tb{tbl\_imp\_revisao} & \textbf{cp\_id\_revisao} (BIGSERIAL); nota\_metodologia, nota\_originalidade, nota\_relevancia (NUMERIC(4,2), NN); parecer\_texto (TEXT, NN); dt\_revisao (TIMESTAMP, NN); recomendacao\_final (VARCHAR(30), NN); ce\_atribuicao (BIGINT, NN \(\rightarrow\) tbl\_atribuicao\_revisao) \\
+\tb{tbl\_imp\_decisao} & \textbf{cp\_id\_decisao} (BIGSERIAL); resultado\_decisao (VARCHAR(20), NN); ds\_justificativa (TEXT); dt\_decisao (TIMESTAMP, NN); ce\_submissao (BIGINT, NN \(\rightarrow\) tbl\_submissao); ce\_revisor (BIGINT, NN \(\rightarrow\) tbl\_pessoa) \\
+\end{longtable}
+}
 
 % =====================================================================
 \section{Rastreabilidade}\label{sec:rastreabilidade}
@@ -423,7 +509,7 @@ Os indicadores do RF42 aparecem entre parênteses.
 \tb{tbl\_imp\_decisao} & Entidade & RF31, RF32, RF42 (xi, xii), RF49 \\
 \rel{Pertence} & Relacionamento 1:N & RF5, RF47, RF49 \\
 \rel{Recebe} & Relacionamento 1:N & RF6 \\
-\rel{Possui\_Trilha} & Autorrelacionamento 1:N & RF1, RF2, RF6 \\
+\rel{Possui\_Trilha} & Autorrelaciona\-mento 1:N & RF1, RF2, RF6 \\
 \rel{Coordena} & Relacionamento 1:N & RF2, RF4, RF40 \\
 \rel{É\_Autor} & Relacionamento N:N & RF4, RF7, RF40, RF42 (xv), RF47, RF49 \\
 \rel{Aborda} & Relacionamento N:N & RF9, RF42 (ii, xii), RF46 \\
@@ -439,10 +525,256 @@ Os indicadores do RF42 aparecem entre parênteses.
 % =====================================================================
 \section{Implantação}\label{sec:implantacao}
 % =====================================================================
+O banco foi implantado no PostgreSQL \citep{postgresql} por meio de um único script
+DDL (\tb{schema.sql}, Anexo~A), executado no pgAdmin. O script começa apagando as
+tabelas existentes (\texttt{DROP TABLE IF EXISTS}, em ordem inversa à de criação), o
+que permite executá-lo novamente sem erros durante os testes. As chaves primárias das
+entidades e de \tb{tbl\_atribuicao\_revisao} são artificiais e numéricas
+(\texttt{BIGSERIAL}), geradas automaticamente pelo SGBD; as demais tabelas associativas
+usam chave primária composta pelas suas chaves estrangeiras. Esta seção descreve a estratégia de tradução do modelo conceitual para o
+relacional, as restrições de integridade e os índices.
+
+\subsection{Estratégia de tradução}
+A tradução seguiu três regras, aplicadas conforme a cardinalidade máxima de cada
+relacionamento \citep{heuser2009}:
+\begin{enumerate}
+    \item \textbf{Relacionamentos 1:N} viram uma chave estrangeira na tabela do lado N.
+    Quando a cardinalidade mínima junto à entidade referenciada é 1, a coluna recebe
+    \texttt{NOT NULL}; quando é 0, a coluna aceita nulo.
+    \item \textbf{Relacionamentos N:N} viram uma tabela associativa, com uma chave
+    estrangeira para cada entidade e chave primária composta pelas duas. Os atributos do
+    relacionamento viram colunas dessa tabela.
+    \item \textbf{A entidade associativa} \rel{É\_Revisor} também vira tabela, mas com
+    chave primária artificial (\tb{cp\_id\_atribuicao}), porque \tb{tbl\_imp\_revisao}
+    precisa referenciar uma atribuição específica (\rel{Gera\_Parecer}). Para não perder
+    a regra do N:N, o par revisor--submissão recebe uma restrição \texttt{UNIQUE}.
+\end{enumerate}
+
+A Tabela~\ref{tab:traducao} mostra como cada relacionamento foi materializado.
+
+\begin{table}[htbp]
+\caption{Tradução dos relacionamentos do modelo conceitual para o relacional.}\label{tab:traducao}
+\centering\small
+\begin{tabular}{>{\raggedright\arraybackslash}p{2.8cm}
+                >{\raggedright\arraybackslash}p{1.6cm}
+                >{\raggedright\arraybackslash}p{9.0cm}}
+\toprule
+\textbf{Relacionamento} & \textbf{Regra} & \textbf{Materialização}\\
+\midrule
+\rel{Pertence} & 1:N & \tb{tbl\_pessoa.ce\_instituicao}, aceita nulo (pessoa sem instituição) \\
+\rel{Recebe} & 1:N & \tb{tbl\_submissao.ce\_trilha}, \texttt{NOT NULL} \\
+\rel{Possui\_Trilha} & 1:N & \tb{tbl\_evento.ce\_evento\_pai}, autorreferência; nulo no evento principal \\
+\rel{Coordena} & 1:N & \tb{tbl\_evento.ce\_coordenador}, \texttt{NOT NULL} \\
+\rel{Gera\_Parecer} & 1:N & \tb{tbl\_imp\_revisao.ce\_atribuicao}, \texttt{NOT NULL} \\
+\rel{Recebe\_Veredito} & 1:N & \tb{tbl\_imp\_decisao.ce\_submissao}, \texttt{NOT NULL} \\
+\rel{Emite} & 1:N & \tb{tbl\_imp\_decisao.ce\_revisor}, \texttt{NOT NULL} \\
+\rel{É\_Autor} & N:N & \tb{tbl\_pessoa\_submissao}, PK (\tb{ce\_pessoa}, \tb{ce\_submissao}) \\
+\rel{Aborda} & N:N & \tb{tbl\_submissao\_topico}, PK (\tb{ce\_submissao}, \tb{ce\_topico}) \\
+\rel{Tem\_Expertise} & N:N & \tb{tbl\_pessoa\_topico}, PK (\tb{ce\_pessoa}, \tb{ce\_topico}) \\
+\rel{É\_Revisor} & Entidade associativa & \tb{tbl\_atribuicao\_revisao}, PK \tb{cp\_id\_atribuicao} e \texttt{UNIQUE} (\tb{ce\_pessoa}, \tb{ce\_submissao}) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+O Código~\ref{lst:atribuicao} mostra a tradução de \rel{É\_Revisor} e de
+\rel{Gera\_Parecer}, que combina as regras 1 e 3.
+
+\begin{lstlisting}[float=htbp,caption={Tradução da entidade associativa \rel{É\_Revisor} e do relacionamento \rel{Gera\_Parecer} (trecho do \tb{schema.sql}).},label={lst:atribuicao}]
+CREATE TABLE tbl_atribuicao_revisao (
+    cp_id_atribuicao BIGSERIAL PRIMARY KEY,
+    ce_pessoa BIGINT NOT NULL,
+    ce_submissao BIGINT NOT NULL,
+    dt_atribuicao TIMESTAMP NOT NULL,
+    status_aceite VARCHAR(20) NOT NULL DEFAULT 'pendente'
+        CHECK (status_aceite IN ('pendente', 'aceito', 'recusado', 'removido')),
+    ind_conflito BOOLEAN NOT NULL DEFAULT FALSE,
+    UNIQUE (ce_pessoa, ce_submissao),
+    FOREIGN KEY (ce_pessoa) REFERENCES tbl_pessoa (cp_id_pessoa),
+    FOREIGN KEY (ce_submissao) REFERENCES tbl_submissao (cp_id_submissao)
+);
+
+CREATE TABLE tbl_imp_revisao (
+    cp_id_revisao BIGSERIAL PRIMARY KEY,
+    ...
+    ce_atribuicao BIGINT NOT NULL,
+    FOREIGN KEY (ce_atribuicao) REFERENCES tbl_atribuicao_revisao (cp_id_atribuicao)
+);
+\end{lstlisting}
+
+\subsection{Restrições de integridade}
+Além das chaves, o DDL usa quatro tipos de restrição para materializar regras do
+minimundo:
+\begin{itemize}
+    \item \texttt{NOT NULL} nos atributos obrigatórios e nas chaves estrangeiras com
+    cardinalidade mínima 1;
+    \item \texttt{UNIQUE} em \tb{email\_principal} e \tb{cd\_orcid}; em (\tb{sg\_evento},
+    \tb{ano\_edicao}), que permite repetir a sigla em edições de anos diferentes (RF1);
+    em (\tb{ce\_submissao}, \tb{ordem\_autoria}), que impede dois autores na mesma
+    posição; e no par revisor--submissão de \rel{É\_Revisor};
+    \item \texttt{CHECK} nos domínios: situação da submissão, do convite, da recomendação
+    e da decisão restritas a listas de valores; notas entre 0 e 10; nível de expertise
+    entre 1 e 5; ordem de autoria a partir de 1; e datas de término posteriores às de
+    início;
+    \item \texttt{DEFAULT} para valores iniciais: submissão \texttt{'submetida'}, convite
+    \texttt{'pendente'} e conflito \texttt{FALSE}.
+\end{itemize}
+
+Algumas regras envolvem mais de uma linha ou tabela e não podem ser expressas com
+essas restrições simples: ao menos um autor e um tópico por submissão, ao menos um
+autor responsável, trilha que não tenha trilhas próprias e submissão apontando sempre
+para uma trilha, e não para o evento principal. Essas regras ficam a cargo da aplicação
+e serão revistas no Marco~2.
+
+\subsection{Índices}
+O PostgreSQL cria índices automaticamente para as chaves primárias e para as
+restrições \texttt{UNIQUE}, mas não para as chaves estrangeiras \citep{postgresql}.
+Como as consultas previstas para os indicadores (RF42 e RF46 a RF49) fazem junções
+por essas colunas, o grupo criou um índice para cada chave estrangeira usada nas
+junções que ainda não era a primeira coluna de uma chave primária ou única
+(Código~\ref{lst:indices}). Por exemplo, a chave primária (\tb{ce\_submissao},
+\tb{ce\_topico}) de \tb{tbl\_submissao\_topico} já acelera buscas por submissão, mas
+não por tópico. Essa foi a otimização do modelo físico adotada neste marco; a análise
+de planos de execução fica para o Marco~2.
+
+\begin{lstlisting}[float=htbp,caption={Índices criados nas chaves estrangeiras (trecho do \tb{schema.sql}).},label={lst:indices}]
+CREATE INDEX idx_pessoa_instituicao ON tbl_pessoa (ce_instituicao);
+CREATE INDEX idx_submissao_trilha ON tbl_submissao (ce_trilha);
+CREATE INDEX idx_submissao_topico_topico ON tbl_submissao_topico (ce_topico);
+CREATE INDEX idx_pessoa_topico_topico ON tbl_pessoa_topico (ce_topico);
+CREATE INDEX idx_atribuicao_submissao ON tbl_atribuicao_revisao (ce_submissao);
+CREATE INDEX idx_revisao_atribuicao ON tbl_imp_revisao (ce_atribuicao);
+CREATE INDEX idx_decisao_submissao ON tbl_imp_decisao (ce_submissao);
+\end{lstlisting}
 
 % =====================================================================
 \section{População e exploração de metadados}\label{sec:populacao}
 % =====================================================================
+
+\subsection{População}
+O banco foi populado com dados sintéticos por meio de um script de \texttt{INSERT} por
+tabela, executados no pgAdmin após o DDL, na ordem do Anexo~B. Cada script tem um único
+comando \texttt{INSERT INTO \dots\ VALUES}, com um registro por linha. As 1.000
+instituições usam nomes de universidades reais, e as 3.500 pessoas são fictícias, cada
+uma vinculada a uma instituição.
+
+Os dados das demais tabelas foram gerados com consultas SQL no próprio PostgreSQL,
+seguindo regras fixas que mantêm o ciclo de avaliação coerente, e depois gravados como
+\texttt{INSERT} com valores literais:
+\begin{itemize}
+    \item três eventos (SBBD, SBES e SBRC) em duas edições (2025 e 2026), cada um com
+    duas trilhas, totalizando 18 linhas em \tb{tbl\_evento};
+    \item 20 tópicos; cada pessoa declara expertise em um ou dois tópicos, com nível de
+    1 a 5;
+    \item 1.700 submissões distribuídas entre as 12 trilhas, registradas dentro do
+    período de submissão da trilha, cada uma com três autores (o primeiro é o
+    responsável) e um ou dois tópicos;
+    \item três revisores por submissão, nunca autores da própria submissão; o convite
+    pode estar aceito, recusado, pendente ou removido, e a atribuição é marcada com
+    \tb{ind\_conflito} quando o revisor é da mesma instituição de algum autor (RF47);
+    \item um parecer para cada convite aceito, entregue entre 5 e 29 dias após a
+    atribuição (RF48), com notas maiores nas submissões aceitas;
+    \item uma decisão final por submissão, emitida pelo coordenador da trilha; em 10\%
+    das submissões, uma decisão anterior de revisão solicitada é preservada (RF32).
+\end{itemize}
+
+A Tabela~\ref{tab:volume} mostra o volume final. Três tabelas passam de 5.000
+registros: \tb{tbl\_pessoa\_topico}, \tb{tbl\_pessoa\_submissao} e
+\tb{tbl\_atribuicao\_revisao}.
+
+\begin{table}[htbp]
+\caption{Volume e espaço em disco de cada tabela após a população.}\label{tab:volume}
+\centering\small
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Tabela} & \textbf{Registros} & \textbf{Dados} & \textbf{Índices} & \textbf{Total}\\
+\midrule
+\tb{tbl\_pessoa\_topico}      & 5.250 & 272 kB & 240 kB & 536 kB \\
+\tb{tbl\_atribuicao\_revisao} & 5.100 & 368 kB & 496 kB & 888 kB \\
+\tb{tbl\_pessoa\_submissao}   & 5.100 & 264 kB & 408 kB & 696 kB \\
+\tb{tbl\_pessoa}              & 3.500 & 328 kB & 496 kB & 856 kB \\
+\tb{tbl\_submissao\_topico}   & 2.550 & 112 kB & 136 kB & 272 kB \\
+\tb{tbl\_imp\_revisao}        & 2.550 & 376 kB & 144 kB & 552 kB \\
+\tb{tbl\_imp\_decisao}        & 1.870 & 200 kB & 136 kB & 368 kB \\
+\tb{tbl\_submissao}           & 1.700 & 280 kB & 96 kB  & 408 kB \\
+\tb{tbl\_instituicao}         & 1.000 & 96 kB  & 40 kB  & 168 kB \\
+\tb{tbl\_topico}              & 20    & 8 kB   & 16 kB  & 32 kB \\
+\tb{tbl\_evento}              & 18    & 8 kB   & 32 kB  & 48 kB \\
+\midrule
+\textbf{Total}                & \textbf{28.658} & & & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Após a carga, o grupo conferiu com consultas simples que os dados respeitam as regras
+que o banco não garante sozinho: toda submissão tem autor responsável e ao menos um
+tópico, nenhuma submissão aponta para um evento principal, nenhum revisor é autor da
+submissão que revisa e a situação de cada submissão corresponde à sua decisão mais
+recente.
+
+\subsection{Exploração de metadados}
+O PostgreSQL guarda a descrição do próprio banco em catálogos que podem ser consultados
+com SQL: o \texttt{information\_schema}, definido pelo padrão SQL, e o
+\texttt{pg\_catalog}, próprio do PostgreSQL \citep{postgresql}. O script
+\tb{metadados.sql} (Anexo~B) reúne sete consultas sobre esses catálogos, resumidas na
+Tabela~\ref{tab:metadados}.
+
+\begin{table}[htbp]
+\caption{Consultas de exploração de metadados e seus resultados.}\label{tab:metadados}
+\centering\small
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.5cm}
+                >{\raggedright\arraybackslash}p{4.6cm}
+                >{\raggedright\arraybackslash}p{4.4cm}
+                >{\raggedright\arraybackslash}p{3.6cm}}
+\toprule
+\textbf{\#} & \textbf{O que mostra} & \textbf{Catálogo} & \textbf{Resultado}\\
+\midrule
+1 & Tabelas do esquema & \tb{information\_schema.tables} & 11 tabelas \\
+2 & Colunas, tipos e nulidade & \tb{information\_schema.columns} & 63 colunas \\
+3 & Chaves primárias, únicas e estrangeiras & \tb{table\_constraints}, \tb{key\_column\_usage} & 11 PK, 5 UNIQUE, 15 FK \\
+4 & Destino de cada chave estrangeira & \tb{constraint\_column\_usage} & 15 referências \\
+5 & Restrições \texttt{CHECK} & \tb{check\_constraints} & 11 restrições \\
+6 & Índices & \tb{pg\_indexes} & 23 índices (16 automáticos e 7 criados) \\
+7 & Registros e espaço em disco & \tb{pg\_stat\_user\_tables} & Tabela~\ref{tab:volume} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+O Código~\ref{lst:metadados_fk} mostra a consulta 4, que reconstrói a partir do
+catálogo as ligações do modelo lógico: cada uma das 15 chaves estrangeiras aparece com
+a tabela e a coluna de origem e de destino, o que permitiu conferir que o DDL
+implementa todos os relacionamentos 1:N e N:N da Tabela~\ref{tab:traducao}.
+
+\begin{lstlisting}[float=htbp,caption={Consulta ao catálogo: destino de cada chave estrangeira.},label={lst:metadados_fk}]
+SELECT kcu.table_name AS tabela_origem,
+       kcu.column_name AS coluna_origem,
+       ccu.table_name AS tabela_destino,
+       ccu.column_name AS coluna_destino
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+     ON kcu.constraint_name = tc.constraint_name
+    AND kcu.table_schema = tc.table_schema
+JOIN information_schema.constraint_column_usage ccu
+     ON ccu.constraint_name = tc.constraint_name
+    AND ccu.table_schema = tc.table_schema
+WHERE tc.table_schema = 'public'
+  AND tc.constraint_type = 'FOREIGN KEY'
+ORDER BY tabela_origem, coluna_origem;
+\end{lstlisting}
+
+A exploração dos metadados trouxe duas observações:
+\begin{itemize}
+    \item \textbf{Restrições reescritas pelo SGBD:} o catálogo não guarda o
+    \texttt{CHECK} exatamente como foi escrito. Por exemplo,
+    \texttt{nivel\_expertise BETWEEN 1 AND 5} aparece como
+    \texttt{(nivel\_expertise >= 1) AND (nivel\_expertise <= 5)}, e as listas
+    \texttt{IN (\dots)} aparecem como comparações com um vetor (\texttt{= ANY (ARRAY[\dots])}).
+    O PostgreSQL também dá nomes automáticos às restrições sem nome
+    (ex.: \texttt{tbl\_evento\_sg\_evento\_ano\_edicao\_key}).
+    \item \textbf{Custo dos índices:} em várias tabelas os índices ocupam mais espaço que
+    os próprios dados (em \tb{tbl\_atribuicao\_revisao}, 496 kB contra 368 kB), porque
+    elas têm poucas colunas e várias chaves. É o custo de espaço pago para acelerar as
+    junções, e será avaliado junto com o desempenho das consultas no Marco~2.
+\end{itemize}
 
 % =====================================================================
 % Referencias
@@ -455,9 +787,58 @@ Os indicadores do RF42 aparecem entre parênteses.
 % Anexos
 % =====================================================================
 \section*{Anexo A -- Script DDL}
+Conteúdo completo do arquivo \tb{schema.sql}.
+
+\lstinputlisting[caption={Script DDL completo (\tb{schema.sql}).},label={lst:ddl}]{schema.sql}
 
 \section*{Anexo B -- Roteiro de reprodução}
+A reprodução usa apenas o PostgreSQL e o pgAdmin. Os arquivos estão listados no
+Anexo~C.
+\begin{enumerate}
+    \item No pgAdmin, criar um banco de dados vazio: botão direito em
+    \textit{Databases} \(\rightarrow\) \textit{Create} \(\rightarrow\)
+    \textit{Database\dots}, com o nome \texttt{sciencereview}.
+    \item Selecionar o banco criado e abrir o \textit{Query Tool}
+    (menu \textit{Tools} \(\rightarrow\) \textit{Query Tool}).
+    \item Abrir cada arquivo abaixo pelo ícone \textit{Open File} e executá-lo com
+    \texttt{F5}, sem nenhum trecho selecionado, nesta ordem:
+    \begin{enumerate}
+        \item \tb{schema.sql};
+        \item \tb{populate\_instituicao.sql};
+        \item \tb{populate\_pessoa.sql};
+        \item \tb{populate\_evento.sql};
+        \item \tb{populate\_topico.sql};
+        \item \tb{populate\_pessoa\_topico.sql};
+        \item \tb{populate\_submissao.sql};
+        \item \tb{populate\_pessoa\_submissao.sql};
+        \item \tb{populate\_submissao\_topico.sql};
+        \item \tb{populate\_atribuicao\_revisao.sql};
+        \item \tb{populate\_imp\_revisao.sql};
+        \item \tb{populate\_imp\_decisao.sql}.
+    \end{enumerate}
+    \item Abrir o \tb{metadados.sql} (Código~\ref{lst:metadados}), executar a linha
+    \texttt{ANALYZE;} e depois selecionar uma consulta por vez e executá-la com
+    \texttt{F5}. O \textit{Query Tool} mostra apenas o resultado do último
+    \texttt{SELECT} executado.
+\end{enumerate}
 
-\section*{Anexo C -- Materiais externos}
+Os scripts de população dependem de os identificadores começarem em 1. Se algum
+arquivo falhar no meio da sequência, basta recomeçar pelo \tb{schema.sql}, que apaga e
+recria todas as tabelas.
+
+\lstinputlisting[caption={Consultas de exploração de metadados (\tb{metadados.sql}).},label={lst:metadados}]{metadados.sql}
+
+\section*{Anexo C -- Arquivos enviados com o relatório}
+Os arquivos abaixo foram enviados junto com este relatório, como documentos auxiliares
+para a reprodução do projeto (Anexo~B):
+\begin{itemize}
+    \item \tb{schema.sql}: script DDL (Anexo~A);
+    \item \tb{populate\_*.sql}: 11 scripts de população, um por tabela, executados na
+    ordem do Anexo~B;
+    \item \tb{metadados.sql}: consultas de exploração de metadados (Código~\ref{lst:metadados});
+    \item \tb{modelo\_conceitual.pdf} e \tb{modelo\_logico.pdf}: modelos conceitual e
+    lógico exportados do brModelo, em versão vetorial das
+    Figuras~\ref{fig:modelo_conceitual} e~\ref{fig:modelo_logico}.
+\end{itemize}
 
 \end{document}
