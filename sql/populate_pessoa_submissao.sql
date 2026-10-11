@@ -1,4 +1,4 @@
-INSERT INTO tbl_pessoa_submissao (ce_pessoa, ce_submissao, ordem_autoria, is_responsavel)
+INSERT INTO tbl_pessoa_submissao (ce_pessoa, ce_submissao, ordem_autoria, ind_responsavel)
 VALUES
 (1, 1, 1, TRUE),
 (2, 1, 2, FALSE),

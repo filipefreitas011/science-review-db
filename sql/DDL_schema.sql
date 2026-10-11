@@ -80,7 +80,7 @@ CREATE TABLE tbl_pessoa_submissao (
     ce_pessoa BIGINT NOT NULL,
     ce_submissao BIGINT NOT NULL,
     ordem_autoria INT NOT NULL CHECK (ordem_autoria >= 1), /* posição do autor na lista de autoria (1º, 2º, 3º autor...) */
-    is_responsavel BOOLEAN NOT NULL, /* marca o(s) autor(es) responsável(is) pela submissão (quem gerencia o envio, recebe notificações etc. - RF7). Atenção: o banco não garante sozinho que pelo menos um autor por submissão tenha TRUE; isso precisa ser checado na aplicação */
+    ind_responsavel BOOLEAN NOT NULL, /* marca o(s) autor(es) responsável(is) pela submissão (quem gerencia o envio, recebe notificações etc. - RF7). Atenção: o banco não garante sozinho que pelo menos um autor por submissão tenha TRUE; isso precisa ser checado na aplicação */
     PRIMARY KEY (ce_pessoa, ce_submissao),
     UNIQUE (ce_submissao, ordem_autoria), /* dois autores da mesma submissão não podem ocupar a mesma posição */
     FOREIGN KEY (ce_pessoa) REFERENCES tbl_pessoa (cp_id_pessoa),
@@ -120,7 +120,7 @@ CREATE TABLE tbl_atribuicao_revisao (
     dt_atribuicao TIMESTAMP NOT NULL,
     status_aceite VARCHAR(20) NOT NULL DEFAULT 'pendente'
         CHECK (status_aceite IN ('pendente', 'aceito', 'recusado', 'removido')),
-    flag_conflito BOOLEAN NOT NULL DEFAULT FALSE,
+    ind_conflito BOOLEAN NOT NULL DEFAULT FALSE,
     UNIQUE (ce_pessoa, ce_submissao), /* mesmo com a PK substituta, o par revisor+submissão continua único (relacionamento N:N) */
     FOREIGN KEY (ce_pessoa) REFERENCES tbl_pessoa (cp_id_pessoa),
     FOREIGN KEY (ce_submissao) REFERENCES tbl_submissao (cp_id_submissao)

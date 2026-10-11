@@ -1,4 +1,4 @@
-INSERT INTO tbl_atribuicao_revisao (ce_pessoa, ce_submissao, dt_atribuicao, status_aceite, flag_conflito)
+INSERT INTO tbl_atribuicao_revisao (ce_pessoa, ce_submissao, dt_atribuicao, status_aceite, ind_conflito)
 VALUES
 (1751, 1, '2025-06-16 00:00:00', 'aceito', FALSE),
 (1752, 1, '2025-06-17 00:00:00', 'recusado', FALSE),
