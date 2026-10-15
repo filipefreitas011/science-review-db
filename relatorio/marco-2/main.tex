@@ -1,0 +1,356 @@
+% =====================================================================
+% Relatorio do Marco 2 (OCRA) -- MATA60 -- Caso ScienceReview
+% Formatacao segundo "Instructions for Authors of SBC Book Chapters" (Regra 4).
+% Secoes seguem o Quadro 3 (secao 4.4 do enunciado).
+% Comentarios "BAREMA" indicam o que cada secao precisa ter para pontuar
+% na rubrica 4.5; comentarios "REGRA" indicam penalidades das regras 4.1.
+% =====================================================================
+%
+% RUBRICA 4.5 (nota 0-10):
+%   P1. Readequacao e Normalizacao (peso 3)
+%     Q1: plano de readequacao e normalizacao, a partir do feedback da
+%         Entrega 1, fundamentado e associado sistematicamente aos requisitos
+%     Q2: Q1 + plano seguido, gerando novos modelos conceitual e logico
+%     Q3: Q2 + novo banco corrigido e populado conforme o plano
+%   P2. Consultas (peso 4)
+%     Q1: >= 30 consultas intermediarias, todas ligadas a RF com justificativa
+%     Q2: Q1 + >= 20 consultas avancadas, todas ligadas a RF com justificativa
+%   P3. Otimizacao (peso 3)
+%     Q1: 20 consultas escolhidas (10 intermediarias + 10 avancadas),
+%         descritas quanto a complexidade, com plano de otimizacao
+%         (algebra relacional e indexacao) para cada uma
+%     Q2: Q1 + as duas solucoes aplicadas + cada consulta executada >= 20
+%         vezes por plano, usando as consultas sem alteracao como baseline
+%     Q3: Q2 + relatorio compara cada plano com o baseline usando
+%         speedup medio e desvio padrao
+%
+% REGRAS 4.1:
+%   R1 diagramas conceituais no BrModelo, notacao Chen  -> invalida a entrega
+%   R2 anexos/links publicos, sem autenticacao           -> invalida a entrega
+%   R3 imagens legiveis                                  -> invalida a entrega
+%   R4 modelo SBC de capitulo de livro                   -> -3 pontos
+%   R5 reproducao so com PostgreSQL + pgAdmin            -> -3 pontos
+%   R6 SQL ISO/IEC 9075, sem Python/R/Java etc.          -> -3 pontos
+%   R7 intermediaria: >= 3 tabelas e >= 2 de JOIN, GROUP BY, WINDOW, COUNT
+%                                                        -> -0,25 por consulta
+%   R8 avancada: >= 3 tabelas e >= 3 de SUBCONSULTA, JOIN, GROUP BY,
+%      WINDOW, COUNT                                     -> -0,25 por consulta
+%   R9 cada consulta associada a pelo menos um RF, explicito no relatorio
+%                                                        -> -0,25 por consulta
+% =====================================================================
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{mathptmx}
+\usepackage[scaled=0.92]{helvet}
+\usepackage[a4paper,top=3.5cm,bottom=2.5cm,left=3cm,right=3cm]{geometry}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage[square]{natbib}
+\usepackage[hidelinks]{hyperref}
+
+% ---------- Pagina e paragrafos ----------
+\pagestyle{empty}
+\setlength{\parindent}{1.27cm}
+\setlength{\parskip}{6pt}
+
+% ---------- Secoes ----------
+\titleformat{\section}{\normalfont\fontsize{13}{15}\selectfont\bfseries}{\thesection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{18pt}{6pt}
+\titleformat{\subsection}{\normalfont\fontsize{12}{14}\selectfont\bfseries}{\thesubsection.}{0.5em}{}
+\titlespacing*{\subsection}{0pt}{12pt}{6pt}
+
+% ---------- Figuras, tabelas e legendas ----------
+\captionsetup{font={footnotesize,sf,bf},labelsep=period,justification=justified,
+  singlelinecheck=true,margin=0.8cm,skip=6pt}
+\captionsetup[table]{position=top}
+
+% ---------- Citacoes no estilo [Autor Ano] ----------
+\setcitestyle{square,aysep={},yysep={,}}
+
+% ---------- Codigo SQL ----------
+\lstset{language=SQL,basicstyle=\ttfamily\footnotesize,breaklines=true,
+  columns=fullflexible,keepspaces=true,frame=single,showstringspaces=false,
+  upquote=true}
+
+% ---------- Utilitarios ----------
+\newcommand{\pendente}[1]{\textbf{[PENDENTE: #1]}}
+\newcommand{\tb}[1]{\texttt{#1}}
+\newcommand{\rel}[1]{\textsf{#1}}
+
+\begin{document}
+\thispagestyle{empty}
+
+% =====================================================================
+% Primeira pagina
+% =====================================================================
+\begin{flushleft}
+{\fontsize{20}{24}\selectfont\bfseries ScienceReview: readequação, normalização e otimização de consultas no banco de dados de gestão de submissões e avaliação científica}\\[1cm]
+{\large Filipe dos Santos Freitas, Larissa Vitória Maturino Assis, Leticia Silva Oliveira, Lucas dos Santos Lima e Lucy Cassia Cerqueira Silva}\\[4pt]
+{\normalsize Instituto de Computação -- Universidade Federal da Bahia (UFBA)\\
+Av. Milton Santos, s/n -- Campus de Ondina -- Salvador -- BA, 40170-110}
+\end{flushleft}
+
+\vspace{1cm}
+
+\begin{center}\textbf{\textit{Abstract}}\end{center}
+\vspace{-6pt}
+{\leftskip=0.8cm\rightskip=0.8cm\noindent\itshape
+This chapter presents the second iteration of the ScienceReview database. Based on
+the feedback from the first delivery, the conceptual and logical models were revised
+and normalized, and a new database was deployed and populated in PostgreSQL. Fifty
+SQL queries (30 intermediate and 20 advanced), each linked to at least one
+requirement, were written for the new database. Twenty of them were submitted to two
+optimization strategies, relational algebra rewriting and indexing, and compared
+against the unmodified queries using mean speedup and standard deviation over
+repeated executions.\par}
+
+\begin{center}\textbf{\textit{Resumo}}\end{center}
+\vspace{-6pt}
+{\leftskip=0.8cm\rightskip=0.8cm\noindent\itshape
+Este capítulo apresenta a segunda iteração do banco de dados do ScienceReview. A
+partir do retorno da primeira entrega, os modelos conceitual e lógico foram
+revisados e normalizados, e um novo banco foi implantado e populado em PostgreSQL.
+Foram escritas 50 consultas SQL (30 intermediárias e 20 avançadas), cada uma
+associada a pelo menos um requisito. Vinte delas foram submetidas a duas estratégias
+de otimização, reescrita por álgebra relacional e indexação, e comparadas às
+consultas sem alteração por meio do \textit{speedup} médio e do desvio padrão em
+execuções repetidas.\par}
+
+% =====================================================================
+\section{Melhorias e normalização}\label{sec:melhorias}
+% =====================================================================
+% BAREMA P1-Q1: plano de readequacao e normalizacao, a partir do feedback
+% da Entrega 1, fundamentado e associado sistematicamente aos requisitos.
+
+\subsection{Retorno da primeira entrega}\label{sec:feedback}
+% Cada ponto do feedback -> acao tomada -> RF afetados.
+
+{\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.7cm}
+                  >{\raggedright\arraybackslash}p{4.6cm}
+                  >{\raggedright\arraybackslash}p{6.0cm}
+                  >{\raggedright\arraybackslash}p{2.0cm}}
+\caption{Retorno da Entrega 1 e ações tomadas.}\label{tab:feedback}\\
+\toprule
+\textbf{\#} & \textbf{Ponto apontado} & \textbf{Ação} & \textbf{RF}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{\#} & \textbf{Ponto apontado} & \textbf{Ação} & \textbf{RF}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+ & & & \\
+\end{longtable}
+}
+
+\subsection{Plano de readequação}\label{sec:plano}
+% Problemas do modelo da Entrega 1 (do feedback e da revisao do grupo),
+% correcao planejada, RF associados e forma normal envolvida.
+
+{\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.7cm}
+                  >{\raggedright\arraybackslash}p{4.0cm}
+                  >{\raggedright\arraybackslash}p{5.4cm}
+                  >{\raggedright\arraybackslash}p{1.6cm}
+                  >{\raggedright\arraybackslash}p{1.4cm}}
+\caption{Plano de readequação.}\label{tab:readequacao}\\
+\toprule
+\textbf{\#} & \textbf{Problema} & \textbf{Correção} & \textbf{RF} & \textbf{FN}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{\#} & \textbf{Problema} & \textbf{Correção} & \textbf{RF} & \textbf{FN}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+ & & & & \\
+\end{longtable}
+}
+
+\subsection{Normalização}\label{sec:normalizacao}
+% Aplicacao e justificativa das estrategias de normalizacao (Quadro 3):
+% dependencias funcionais de cada relacao e verificacao de 1FN, 2FN, 3FN
+% e FNBC. Desnormalizacoes mantidas precisam de justificativa.
+
+% =====================================================================
+\section{Novo banco de dados}\label{sec:novobd}
+% =====================================================================
+% BAREMA P1-Q2: plano seguido, gerando novos modelos conceitual e logico.
+% BAREMA P1-Q3: novo banco corrigido e populado conforme o plano.
+
+\subsection{Modelo conceitual}
+% REGRA R1: diagrama feito no BrModelo, notacao de Peter Chen.
+% REGRA R3: imagem legivel.
+
+\subsection{Modelo lógico}
+
+\subsection{Implantação}
+% Script DDL e estrategia de traducao do MER para o relacional.
+% Manter pelo menos duas tabelas com prefixo "tabela_imp" (regra do Marco 1).
+
+\subsection{População}
+% Volume por tabela. Entrega 1 exigia >= 3 tabelas com >= 5.000 registros.
+
+% =====================================================================
+\section{Consultas}\label{sec:consultas}
+% =====================================================================
+% BAREMA P2-Q1: >= 30 intermediarias ligadas a RF, com justificativa.
+% BAREMA P2-Q2: >= 20 avancadas ligadas a RF, com justificativa.
+% REGRA R7, R8: conferir tabelas e recursos de cada consulta.
+% REGRA R9: RF explicito para cada consulta.
+% REGRA R6: SQL padrao ISO/IEC 9075.
+% Codigo comentado das consultas: aqui ou no Anexo C.
+
+{\small
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.8cm}
+                  >{\raggedright\arraybackslash}p{5.4cm}
+                  >{\raggedright\arraybackslash}p{0.8cm}
+                  >{\raggedright\arraybackslash}p{1.8cm}
+                  >{\raggedright\arraybackslash}p{1.6cm}
+                  >{\raggedright\arraybackslash}p{2.4cm}}
+\caption{Catálogo das consultas.}\label{tab:consultas}\\
+\toprule
+\textbf{ID} & \textbf{Objetivo} & \textbf{Tab.} & \textbf{Recursos} & \textbf{RF} & \textbf{Justificativa}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Objetivo} & \textbf{Tab.} & \textbf{Recursos} & \textbf{RF} & \textbf{Justificativa}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\multicolumn{6}{l}{\textit{Consultas intermediárias}}\\
+ & & & & & \\
+\midrule
+\multicolumn{6}{l}{\textit{Consultas avançadas}}\\
+ & & & & & \\
+\end{longtable}
+}
+
+% =====================================================================
+\section{Plano de otimização 1: álgebra relacional}\label{sec:otim-algebra}
+% =====================================================================
+% BAREMA P3-Q1: 20 consultas escolhidas (10 intermediarias + 10 avancadas),
+% criterio de escolha justificado, complexidade descrita e plano de
+% otimizacao para cada consulta.
+% Enunciado: pelo menos 3 tecnicas diferentes de algebra relacional.
+
+\subsection{Seleção das consultas}
+% Criterios sugeridos pelo enunciado: (i) cumprem mais requisitos;
+% (ii) ligadas a requisitos nucleares; (iii) maior custo no EXPLAIN ANALYZE.
+
+{\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.9cm}
+                  >{\raggedright\arraybackslash}p{4.6cm}
+                  >{\raggedright\arraybackslash}p{4.4cm}
+                  >{\raggedright\arraybackslash}p{3.2cm}}
+\caption{Consultas escolhidas para otimização.}\label{tab:selecao}\\
+\toprule
+\textbf{ID} & \textbf{Critério de escolha} & \textbf{Complexidade} & \textbf{Custo original}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Critério de escolha} & \textbf{Complexidade} & \textbf{Custo original}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+ & & & \\
+\end{longtable}
+}
+
+\subsection{Técnicas de álgebra relacional}
+
+\subsection{Aplicação por consulta}
+
+% =====================================================================
+\section{Plano de otimização 2: indexação}\label{sec:otim-indice}
+% =====================================================================
+% BAREMA P3-Q1: plano de indexacao para cada consulta escolhida.
+% BAREMA P3-Q2: plano aplicado.
+
+\subsection{Estratégia de indexação}
+
+\subsection{Aplicação por consulta}
+
+% =====================================================================
+\section{Análise de desempenho}\label{sec:desempenho}
+% =====================================================================
+% BAREMA P3-Q2: cada consulta executada >= 20 vezes em cada plano;
+% baseline = consultas sem alteracao.
+% BAREMA P3-Q3: comparacao de cada plano com o baseline usando speedup
+% medio e desvio padrao.
+
+\subsection{Metodologia}
+% Ambiente (hardware, versao do PostgreSQL), numero de execucoes,
+% forma de medir o tempo e definicao do speedup.
+
+\subsection{Resultados}
+
+{\small
+\setlength{\tabcolsep}{4pt}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.9cm}
+                  >{\raggedleft\arraybackslash}p{2.0cm}
+                  >{\raggedleft\arraybackslash}p{2.0cm}
+                  >{\raggedleft\arraybackslash}p{2.0cm}
+                  >{\raggedleft\arraybackslash}p{2.6cm}
+                  >{\raggedleft\arraybackslash}p{2.6cm}}
+\caption{Desempenho de cada plano em relação ao baseline.}\label{tab:resultados}\\
+\toprule
+\textbf{ID} & \textbf{Baseline (ms)} & \textbf{Álgebra (ms)} & \textbf{Índices (ms)} & \textbf{Speedup álgebra ($\bar{S}\pm\sigma$)} & \textbf{Speedup índices ($\bar{S}\pm\sigma$)}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Baseline (ms)} & \textbf{Álgebra (ms)} & \textbf{Índices (ms)} & \textbf{Speedup álgebra ($\bar{S}\pm\sigma$)} & \textbf{Speedup índices ($\bar{S}\pm\sigma$)}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+ & & & & & \\
+\end{longtable}
+}
+
+\subsection{Discussão}
+
+% =====================================================================
+% Referencias
+% =====================================================================
+\renewcommand{\refname}{Referências}
+\bibliographystyle{apalike}
+\bibliography{referencias_marco2}
+
+% =====================================================================
+% Anexos
+% =====================================================================
+% REGRA R2: links externos publicos, sem autenticacao.
+% REGRA R5: reproducao apenas com PostgreSQL + pgAdmin.
+\section*{Anexo A -- Script DDL}
+
+\section*{Anexo B -- Script de população}
+
+\section*{Anexo C -- Consultas}
+
+\section*{Anexo D -- Scripts de otimização e medição}
+
+\section*{Anexo E -- Roteiro de reprodução}
+
+\section*{Anexo F -- Materiais externos}
+
+\end{document}
